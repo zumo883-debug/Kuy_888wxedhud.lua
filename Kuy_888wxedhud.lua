@@ -1,5 +1,5 @@
 -- =================================================================
--- WXED HUD - Red Knife Duel (WXED HUD Logo Floating Button Version)
+-- WXED HUD - Red Knife Duel (Full Details & Fixed Head Expander)
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -12,8 +12,21 @@ local PathfindingService = game:GetService("PathfindingService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- โหลด Fluent UI Library
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+-- โหลด Fluent UI Library และ Addons แบบครบถ้วน
+local success, Fluent = pcall(function()
+    return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+end)
+
+if not success or not Fluent then
+    local StarterGui = game:GetService("StarterGui")
+    StarterGui:SetCore("SendNotification", {
+        Title = "WXED HUD Error",
+        Text = "ไม่สามารถโหลด Fluent UI ได้!",
+        Duration = 5
+    })
+    return
+end
+
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
@@ -27,7 +40,7 @@ local boxFarmActive = false
 local rapidFireActive = false
 local fastReloadActive = false
 
--- พิกัดจุดเดินฟาร์มกล่อง
+-- พิกัดจุดฟาร์มกล่อง / ส่งของ
 local PICKUP_POS = Vector3.new(-294.2, 25.0, 36.6)
 local WAYPOINT_POS = Vector3.new(-237.8, 25.0, 188.7)
 local DROPOFF_POS = Vector3.new(456.1, 25.8, 176.4)
@@ -46,7 +59,7 @@ end)
 
 -- สร้างหน้าต่างเมนูหลัก
 local Window = Fluent:CreateWindow({
-    Title = "💜 WXED HUD | ดวลมีดสีแดง",
+    Title = "💜 WXED HUD | ดวลมีดแดง",
     SubTitle = "by WXED",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -64,7 +77,7 @@ local ToggleBtn = Instance.new("ImageButton", MobileGui)
 ToggleBtn.Size = UDim2.new(0, 52, 0, 52)
 ToggleBtn.Position = UDim2.new(0, 15, 0.4, 0)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 15, 65)
-ToggleBtn.Image = "rbxassetid://100536037895293" -- โลโก้ WXED HUD
+ToggleBtn.Image = "rbxassetid://100536037895293"
 ToggleBtn.Draggable = true
 
 local BtnCorner = Instance.new("UICorner", ToggleBtn)
@@ -81,20 +94,9 @@ ToggleBtn.MouseButton1Click:Connect(function()
 end)
 
 -- สร้างแท็บเมนูแยกบรรทัดชัดเจน
-local FarmTab = Window:AddTab({
-    Title = "🌾 ฟาร์ม",
-    Icon = "package"
-})
-
-local CombatTab = Window:AddTab({
-    Title = "⚔️ ต่อสู้/ESP",
-    Icon = "sword"
-})
-
-local SettingsTab = Window:AddTab({
-    Title = "⚙️ ตั้งค่า",
-    Icon = "settings"
-})
+local FarmTab = Window:AddTab({ Title = "🌾 ฟาร์ม", Icon = "package" })
+local CombatTab = Window:AddTab({ Title = "⚔️ ต่อสู้/ESP", Icon = "sword" })
+local SettingsTab = Window:AddTab({ Title = "⚙️ ตั้งค่า", Icon = "settings" })
 
 local Options = Fluent.Options
 
@@ -116,9 +118,7 @@ NormalToggle:OnChanged(function()
     normalFarmActive = NormalToggle.Value
     if normalFarmActive then
         boxFarmActive = false
-        if Options.BoxFarmToggle then
-            Options.BoxFarmToggle:SetValue(false)
-        end
+        if Options.BoxFarmToggle then Options.BoxFarmToggle:SetValue(false) end
     end
 end)
 
@@ -131,9 +131,7 @@ BoxToggle:OnChanged(function()
     boxFarmActive = BoxToggle.Value
     if boxFarmActive then
         normalFarmActive = false
-        if Options.NormalFarmToggle then
-            Options.NormalFarmToggle:SetValue(false)
-        end
+        if Options.NormalFarmToggle then Options.NormalFarmToggle:SetValue(false) end
     end
 end)
 
@@ -149,21 +147,13 @@ FarmTab:AddButton({
                     local name = string.lower(obj.Name)
                     if name:find("gun") or name:find("shop") or name:find("dealer") or name:find("npc") then
                         char.HumanoidRootPart.CFrame = obj:GetPivot() + Vector3.new(0, 3, 3)
-                        Fluent:Notify({
-                            Title = "สำเร็จ!",
-                            Content = "วาร์ปไปหา NPC แล้ว",
-                            Duration = 2
-                        })
+                        Fluent:Notify({ Title = "สำเร็จ!", Content = "วาร์ปไปหา NPC แล้ว", Duration = 2 })
                         return
                     end
                 end
             end
             
-            Fluent:Notify({
-                Title = "แจ้งเตือน",
-                Content = "ไม่พบ NPC ร้านค้าในแมพนี้",
-                Duration = 2
-            })
+            Fluent:Notify({ Title = "แจ้งเตือน", Content = "ไม่พบ NPC ร้านค้าในแมพนี้", Duration = 2 })
         end)
     end
 })
@@ -176,10 +166,7 @@ local HeadToggle = CombatTab:AddToggle("HeadToggle", {
     Title = "🎯 ระบบหัวใหญ่ (Head Expander)",
     Default = false
 })
-
-HeadToggle:OnChanged(function()
-    isHeadActive = HeadToggle.Value
-end)
+HeadToggle:OnChanged(function() isHeadActive = HeadToggle.Value end)
 
 CombatTab:AddInput("HeadInput", {
     Title = "📝 พิมพ์ขนาดหัว (1 - 35)",
@@ -188,6 +175,7 @@ CombatTab:AddInput("HeadInput", {
     Finished = true,
     Callback = function(val)
         currentSize = tonumber(val) or 5.0
+        Fluent:Notify({ Title = "อัปเดตขนาดหัว", Content = "ตั้งค่าขนาดหัวเป็น: " .. tostring(currentSize), Duration = 1.5 })
     end
 })
 
@@ -195,6 +183,7 @@ CombatTab:AddButton({
     Title = "➕ เพิ่มขนาดหัว (+2.5)",
     Callback = function()
         currentSize = math.min(currentSize + 2.5, 35)
+        Fluent:Notify({ Title = "อัปเดตขนาดหัว", Content = "ขนาดหัวปัจจุบัน: " .. tostring(currentSize), Duration = 1.5 })
     end
 })
 
@@ -202,41 +191,32 @@ CombatTab:AddButton({
     Title = "➖ ลดขนาดหัว (-2.5)",
     Callback = function()
         currentSize = math.max(currentSize - 2.5, 1)
+        Fluent:Notify({ Title = "อัปเดตขนาดหัว", Content = "ขนาดหัวปัจจุบัน: " .. tostring(currentSize), Duration = 1.5 })
     end
 })
 
 local RapidToggle = CombatTab:AddToggle("RapidFireToggle", {
-    Title = "🔥 ยิงรัวกระสุน",
+    Title = "🔥 ยิงรัวกระสุน (ซุปเปอร์เร่งความเร็ว)",
     Default = false
 })
-
-RapidToggle:OnChanged(function()
-    rapidFireActive = RapidToggle.Value
-end)
+RapidToggle:OnChanged(function() rapidFireActive = RapidToggle.Value end)
 
 local ReloadToggle = CombatTab:AddToggle("FastReloadToggle", {
     Title = "⚡ รีโหลดไว",
     Default = false
 })
-
-ReloadToggle:OnChanged(function()
-    fastReloadActive = ReloadToggle.Value
-end)
+ReloadToggle:OnChanged(function() fastReloadActive = ReloadToggle.Value end)
 
 local EspToggle = CombatTab:AddToggle("EspToggle", {
     Title = "👁️ มองทะลุผู้เล่น (Player ESP)",
     Default = true
 })
-
-EspToggle:OnChanged(function()
-    isEspActive = EspToggle.Value
-end)
+EspToggle:OnChanged(function() isEspActive = EspToggle.Value end)
 
 local NpcEspToggle = CombatTab:AddToggle("NpcEspToggle", {
     Title = "📍 มองทะลุ NPC / ร้านค้า (NPC ESP)",
     Default = true
 })
-
 NpcEspToggle:OnChanged(function()
     isNpcEspActive = NpcEspToggle.Value
     if not isNpcEspActive then
@@ -244,9 +224,7 @@ NpcEspToggle:OnChanged(function()
             for _, obj in pairs(Workspace:GetDescendants()) do
                 if obj:IsA("Model") then
                     local hl = obj:FindFirstChild("WxNpcHl")
-                    if hl then
-                        hl:Destroy()
-                    end
+                    if hl then hl:Destroy() end
                 end
             end
         end)
@@ -258,10 +236,11 @@ end)
 -- =================================================================
 
 SettingsTab:AddParagraph({
-    Title = "⚙️ ตั้งค่าความลื่น",
-    Content = "แสดงค่า FPS/Ping และโหมดภาพดินน้ำมัน"
+    Title = "⚙️ ตั้งค่าความลื่น & UI",
+    Content = "แสดงค่า FPS/Ping สวยๆ บนหน้าจอ และโหมดภาพดินน้ำมัน"
 })
 
+-- สร้าง UI แสดง FPS & Ping สุดสวย
 local FpsGui = Instance.new("ScreenGui", PlayerGui)
 FpsGui.Name = "WxedFpsDisplay"
 FpsGui.ResetOnSpawn = false
@@ -269,12 +248,12 @@ FpsGui.ResetOnSpawn = false
 local FpsLabel = Instance.new("TextLabel", FpsGui)
 FpsLabel.Size = UDim2.new(0, 160, 0, 30)
 FpsLabel.Position = UDim2.new(0, 15, 0, 70)
-FpsLabel.BackgroundTransparency = 0.4
+FpsLabel.BackgroundTransparency = 0.3
 FpsLabel.BackgroundColor3 = Color3.fromRGB(35, 15, 50)
 FpsLabel.TextColor3 = Color3.fromRGB(225, 120, 255)
 FpsLabel.TextSize = 13
 FpsLabel.Font = Enum.Font.GothamBold
-FpsLabel.Text = "FPS: 60"
+FpsLabel.Text = " FPS: 60 | Ping: 0ms"
 
 local LabelCorner = Instance.new("UICorner", FpsLabel)
 LabelCorner.CornerRadius = UDim.new(0, 6)
@@ -287,7 +266,6 @@ local ShowFpsToggle = SettingsTab:AddToggle("ShowFpsToggle", {
     Title = "📊 แสดง FPS & Ping บนหน้าจอ",
     Default = true
 })
-
 ShowFpsToggle:OnChanged(function()
     FpsGui.Enabled = ShowFpsToggle.Value
 end)
@@ -308,11 +286,7 @@ SettingsTab:AddButton({
                 end
             end
         end)
-        Fluent:Notify({
-            Title = "สำเร็จ!",
-            Content = "เปิดโหมดภาพดินน้ำมันเรียบร้อยแล้ว",
-            Duration = 2
-        })
+        Fluent:Notify({ Title = "สำเร็จ!", Content = "เปิดโหมดภาพดินน้ำมันเรียบร้อยแล้ว", Duration = 2 })
     end
 })
 
@@ -329,7 +303,7 @@ Window:SelectTab(1)
 -- CORE LOOPS (ระบบการทำงานหลักหลังบ้าน)
 -- =================================================================
 
--- 1. ลูปจัดการ FPS, ESP ผู้เล่น และหัวใหญ่
+-- 1. ลูปจัดการ FPS, ESP ผู้เล่น และระบบหัวใหญ่ (ปรับปรุงใหม่บังคับขยายหัวทุกโครงสร้าง)
 RunService.RenderStepped:Connect(function()
     pcall(function()
         local currentFps = math.floor(1 / task.wait())
@@ -342,12 +316,20 @@ RunService.RenderStepped:Connect(function()
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
                 local char = player.Character
-                local head = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+                local head = char:FindFirstChild("Head")
                 
                 if isHeadActive and head then
                     pcall(function()
+                        -- บังคับเปลี่ยนขนาดและปิดการชนเพื่อให้หัวใหญ่ทำงานได้ผล 100%
                         head.Size = Vector3.new(currentSize, currentSize, currentSize)
+                        head.Transparency = 0.4
                         head.CanCollide = false
+                        -- ป้องกันสคริปต์เกมรีเซ็ต Mesh ขนาดหัว
+                        for _, desc in pairs(head:GetDescendants()) do
+                            if desc:IsA("SpecialMesh") or desc:IsA("BlockMesh") then
+                                desc.Scale = Vector3.new(1, 1, 1)
+                            end
+                        end
                     end)
                 end
                 
@@ -364,7 +346,7 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- 2. ลูปจัดการ ESP NPC ร้านค้า (รันช้าลงนิดนึงเพื่อลดอาการแลค)
+-- 2. ลูปจัดการ ESP NPC ร้านค้า
 task.spawn(function()
     while true do
         pcall(function()
@@ -390,22 +372,30 @@ task.spawn(function()
     end
 end)
 
--- 3. ลูปยิงรัว & รีโหลดไว
+-- 3. ลูปยิงรัว & รีโหลดไว (เจาะลึกทุกค่าโมดูลปืน)
 RunService.Stepped:Connect(function()
     pcall(function()
         local char = LocalPlayer.Character
         if not char then return end
-        for _, tool in pairs(char:GetChildren()) do
-            if tool:IsA("Tool") then
-                for _, v in pairs(tool:GetDescendants()) do
-                    if v:IsA("NumberValue") or v:IsA("IntValue") then
-                        local name = string.lower(v.Name)
-                        if rapidFireActive and (name:find("cooldown") or name:find("firerate") or name:find("delay") or name:find("fire")) then
-                            if v.Value > 0.02 then v.Value = 0.02 end
+        
+        local items = {}
+        for _, v in pairs(char:GetChildren()) do if v:IsA("Tool") then table.insert(items, v) end end
+        local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
+        if bp then
+            for _, v in pairs(bp:GetChildren()) do if v:IsA("Tool") then table.insert(items, v) end end
+        end
+
+        for _, tool in pairs(items) do
+            for _, v in pairs(tool:GetDescendants()) do
+                if v:IsA("NumberValue") or v:IsA("IntValue") then
+                    local name = string.lower(v.Name)
+                    if rapidFireActive then
+                        if name:find("cooldown") or name:find("firerate") or name:find("delay") or name:find("fire") or name:find("speed") or name:find("rate") then
+                            if v.Value > 0.001 then v.Value = 0.001 end
                         end
-                        if fastReloadActive and name:find("reload") then
-                            if v.Value > 0.1 then v.Value = 0.1 end
-                        end
+                    end
+                    if fastReloadActive and name:find("reload") then
+                        if v.Value > 0.05 then v.Value = 0.05 end
                     end
                 end
             end
@@ -452,28 +442,16 @@ local function smartMoveTo(targetPos)
     if not char or not char:FindFirstChild("Humanoid") or not char:FindFirstChild("HumanoidRootPart") then return end
     local humanoid, rootPart = char.Humanoid, char.HumanoidRootPart
 
-    local path = PathfindingService:CreatePath({
-        AgentRadius = 2,
-        AgentHeight = 5,
-        AgentCanJump = true
-    })
-    
+    local path = PathfindingService:CreatePath({ AgentRadius = 2, AgentHeight = 5, AgentCanJump = true })
     if pcall(function() path:ComputeAsync(rootPart.Position, targetPos) end) and path.Status == Enum.PathStatus.Success then
         for _, wp in ipairs(path:GetWaypoints()) do
             if not boxFarmActive and not normalFarmActive then break end
             humanoid:MoveTo(wp.Position)
-            if wp.Action == Enum.PathWaypointAction.Jump then
-                humanoid.Jump = true
-            end
+            if wp.Action == Enum.PathWaypointAction.Jump then humanoid.Jump = true end
             local reached, conn = false, nil
-            conn = humanoid.MoveToFinished:Connect(function()
-                reached = true
-                conn:Disconnect()
-            end)
+            conn = humanoid.MoveToFinished:Connect(function() reached = true conn:Disconnect() end)
             local timeout = tick() + 1.5
-            while not reached and tick() < timeout do
-                task.wait(0.1)
-            end
+            while not reached and tick() < timeout do task.wait(0.1) end
             if conn then conn:Disconnect() end
         end
     else
@@ -537,7 +515,7 @@ task.spawn(function()
                         if (root.Position - PICKUP_POS).Magnitude > 4.0 then
                             smartMoveTo(PICKUP_POS)
                         elseif (root.Position - WAYPOINT_POS).Magnitude > 8.0 and root.Position.Z < (WAYPOINT_POS.Z - 20) then
-                            smartMoveTo(WAYPOINT_POS)
+                                    smartMoveTo(WAYPOINT_POS)
                         else
                             hum:MoveTo(root.Position)
                             local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
@@ -560,4 +538,6 @@ task.spawn(function()
         end)
         task.wait(0.25)
     end
-    
+end)
+
+Fluent:Notify({ Title = "WXED HUD", Content = "อัปเดตระบบหัวใหญ่และฟังก์ชันครบถ้วนสำเร็จแล้วครับพี่ชาย!", Duration = 5 })
