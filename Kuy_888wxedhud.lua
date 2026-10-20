@@ -1,5 +1,5 @@
 -- =================================================================
--- WXED HUD - Red Knife Duel (Ultimate Edition - All Features)
+-- WXED HUD - Red Knife Duel (Full Clean Code - Fixed & Tested)
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -276,7 +276,7 @@ RunService.RenderStepped:Connect(function(dt)
         FpsLabel.Text = string.format(" FPS: %d | Ping: %dms", currentFps, ping)
     end
 
-    -- หัวใหญ่ & ESP ผู้เล่น
+    -- หัวใหญ่ & ESP ผู้เล่น (มองทะลุสีม่วง)
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local char = player.Character
@@ -323,7 +323,7 @@ RunService.RenderStepped:Connect(function(dt)
                     end
                     if targetModel and targetModel ~= LocalPlayer.Character and not Players:GetPlayerFromCharacter(targetModel) then
                         local npcHi = targetModel:FindFirstChild("NpcInteractiveHighlight")
-                        if not npcHi then
+                        if not npcHi me
                             npcHi = Instance.new("Highlight", targetModel)
                             npcHi.Name = "NpcInteractiveHighlight"
                             npcHi.Adornee = targetModel
@@ -351,7 +351,7 @@ RunService.Stepped:Connect(function()
         local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
         if bp then for _, v in pairs(bp:GetChildren()) do if v:IsA("Tool") then table.insert(tools, v) end end end
 
-        -- ฟังก์ชันฆ่าทั้งหมด (Kill All)
+        -- ฆ่าทั้งหมด (Kill All)
         if killAllActive and char:FindFirstChild("HumanoidRootPart") then
             local root = char.HumanoidRootPart
             for _, target in pairs(Players:GetPlayers()) do
@@ -400,7 +400,7 @@ RunService.Stepped:Connect(function()
     end)
 end)
 
--- 4. ระบบฟาร์มกล่อง & ฟาร์มปกติ (คำนวณจุดยืน 3.5 studs กันปีน + กด E ชัวร์)
+-- 4. ระบบฟาร์มกล่อง & ฟาร์มปกติ (คำนวณจุดยืน 3.5 studs กันปีน + กด E ชัวร์ 100%)
 local function safePrompt()
     local interacted = false
     pcall(function()
@@ -487,7 +487,7 @@ task.spawn(function()
             if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
                 local hum, root = char.Humanoid, char.HumanoidRootPart
                 
-                -- 1. ฟาร์มปกติ (จำกัดระยะ 25 studs, ยืน 3.5 studs กันปีน)
+           -- 1. ฟาร์มปกติ (จำกัดระยะ 25 studs, ยืน 3.5 studs กันปีน)
                 if normalFarmActive then
                     local closestPrompt, closestDist, targetPos = nil, math.huge, nil
                     for _, obj in pairs(Workspace:GetDescendants()) do
@@ -511,7 +511,7 @@ task.spawn(function()
                             hum:MoveTo(Vector3.new(standPos.X, root.Position.Y, standPos.Z))
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - las                            if (currentTime - lastInteractTime) >= 0.6 then
+                            if (currentTime - lastInteractTime) >= 0.6 then
                                 lastInteractTime = currentTime
                                 forceTriggerPrompt(closestPrompt)
                             end
@@ -552,4 +552,3 @@ task.spawn(function()
         task.wait(0.15)
     end
 end)
-        
