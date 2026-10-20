@@ -461,7 +461,40 @@ local function smartMoveTo(targetPos)
     end
 end
 
--- ลูปเดินฟาร์มหลัก
+-- =================================================================
+-- ลูปเดินฟาร์มหลัก (แก้เดินไถลปีนป่าย & ปรับปรุงระบบกด E ให้ติดชัวร์)
+-- =================================================================
+
+local function safePrompt()
+    local interacted = false
+    pcall(function()
+        for _, v in pairs(Workspace:GetDescendants()) do
+            if v:IsA("ProximityPrompt") and v.Enabled and not blacklistedPrompts[v] then
+                local p = v.Parent
+                local pos = p:IsA("BasePart") and p.Position or (p:IsA("Model") and p:GetPivot().Position or nil)
+                if pos and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local dist = (LocalPlayer.Character.HumanoidRootPart.Position - pos).Magnitude
+                    if dist <= (v.MaxActivationDistance or 14) then
+                        local h = v.HoldDuration or 0
+                        if v.InputHoldBegin then v:InputHoldBegin() end
+                        task.wait(h + 0.1)
+                        if v.InputHoldEnd then v:InputHoldEnd() end
+                        
+                        if fireproximityprompt then 
+                            fireproximityprompt(v) 
+                        end
+                        
+                        blacklistedPrompts[v] = tick() + 2.5
+                        interacted = true
+                        break
+                    end
+                end
+            end
+        end
+    end)
+    return interacted
+end
+
 task.spawn(function()
     while true do
         pcall(function()
@@ -474,6 +507,7 @@ task.spawn(function()
             if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
                 local hum, root = char.Humanoid, char.HumanoidRootPart
                 
+                -- 1. ฟาร์มปกติ (เดินพอดี ไม่เลยขึ้นข้างบน)
                 if normalFarmActive then
                     local closestPrompt, closestDist, targetPos = nil, math.huge, nil
                     for _, obj in pairs(Workspace:GetDescendants()) do
@@ -490,48 +524,56 @@ task.spawn(function()
                             end
                         end
                     end
+                    
                     if closestPrompt and targetPos then
-                        if closestDist > 5.5 then 
+                        -- ถ้าระยะห่างเกิน 4 ชัดเจน ให้เดินเข้าหา
+                        if closestDist > 4.0 then 
                             smartMoveTo(targetPos)
                         else
+                            -- พอเข้าระยะ 4 ให้สั่งหยุดนิ่งทันที ไม่ให้เดินเลยปีนป่ายขึ้นไป
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 1.2 then
+                            if (currentTime - lastInteractTime) >= 0.8 then
                                 lastInteractTime = currentTime
                                 safePrompt()
                             end
                         end
                     end
 
+                -- 2. ฟาร์มกล่องอัจฉริยะ (กด E หยิบ/ส่งชัวร์ แล้วออกเดินต่อ)
                 elseif boxFarmActive then
                     if hasBox() then
                         equipBox()
+                        -- ถือกล่องแล้ว เดินไปจุดส่ง (DROPOFF)
                         if (root.Position - DROPOFF_POS).Magnitude > 4.0 then
                             smartMoveTo(DROPOFF_POS)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 1.0 then
+                            if (currentTime - lastInteractTime) >= 0.8 then
                                 lastInteractTime = currentTime
                                 safePrompt()
+                                task.wait(0.3)
                             end
                         end
                     else
+                        -- ยังไม่มีกล่อง เดินไปจุดรับ (PICKUP)
                         if (root.Position - PICKUP_POS).Magnitude > 4.0 then
                             smartMoveTo(PICKUP_POS)
                         else
+                            -- หยุดนิ่งตรงจุดรับกล่องเพื่อกด E หยิบเน้นๆ
                             hum:MoveTo(root.Position)
-                            task.wait(0.2)
-                            if (currentTime - lastInteractTime) >= 1.0 then
+                            if (currentTime - lastInteractTime) >= 0.8 then
                                 lastInteractTime = currentTime
                                 safePrompt()
-                                task.wait(0.5)
+                                task.wait(0.4) -- รอให้กล่องเข้ากระเป๋า แล้วลูปถัดไปจะออกเดินต่อทันที
                             end
                         end
                     end
                 end
             end
         end)
-        task.wait(0.2)
+        task.wait(0.15)
     end
 end)
+
 
 Fluent:Notify({ Title = "WXED HUD", Content = "โหลดสคริปต์ฉบับสมบูรณ์สำเร็จ!", Duration = 4 })
