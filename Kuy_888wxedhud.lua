@@ -1,5 +1,5 @@
 -- =================================================================
--- WXED HUD - Red Knife Duel (Fluent UI + Working Big Head)
+-- WXED HUD - Red Knife Duel (Fluent UI - Fixed Features & Text Input)
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -17,22 +17,13 @@ local success, Fluent = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
 
-if not success or not Fluent then
-    local StarterGui = game:GetService("StarterGui")
-    StarterGui:SetCore("SendNotification", {
-        Title = "WXED HUD Error",
-        Text = "ไม่สามารถโหลด Fluent UI ได้!",
-        Duration = 5
-    })
-    return
-end
+if not success or not Fluent then return end
 
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 -- สถานะการทำงาน
 local currentSize = 5.0
-local maxHeadSize = 30.0
 local isHeadActive = true
 local isEspActive = true
 local isNpcEspActive = true
@@ -49,7 +40,7 @@ local DROPOFF_POS = Vector3.new(456.1, 25.8, 176.4)
 local lastInteractTime = 0
 local blacklistedPrompts = {}
 
--- ระบบกันหลุด Anti-AFK
+-- กันหลุด Anti-AFK
 LocalPlayer.Idled:Connect(function()
     pcall(function()
         VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
@@ -58,7 +49,7 @@ LocalPlayer.Idled:Connect(function()
     end)
 end)
 
--- สร้างหน้าต่าง Fluent UI
+-- หน้าต่าง Fluent UI
 local Window = Fluent:CreateWindow({
     Title = "💜 WXED HUD | ดวลมีดแดง",
     SubTitle = "by WXED",
@@ -69,7 +60,7 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
--- ปุ่มลอยวงกลมเปิด/ปิดเมนูบนมือถือ
+-- ปุ่มลอยบนมือถือ
 local MobileGui = Instance.new("ScreenGui", PlayerGui)
 MobileGui.Name = "WxedMobileToggle"
 MobileGui.ResetOnSpawn = false
@@ -80,21 +71,16 @@ ToggleBtn.Position = UDim2.new(0, 15, 0.4, 0)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 15, 65)
 ToggleBtn.Image = "rbxassetid://100536037895293"
 ToggleBtn.Draggable = true
-
-local BtnCorner = Instance.new("UICorner", ToggleBtn)
-BtnCorner.CornerRadius = UDim.new(1, 0)
-
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
 local BtnStroke = Instance.new("UIStroke", ToggleBtn)
 BtnStroke.Color = Color3.fromRGB(215, 65, 255)
 BtnStroke.Thickness = 2
 
 ToggleBtn.MouseButton1Click:Connect(function()
-    pcall(function()
-        Window:Minimize()
-    end)
+    pcall(function() Window:Minimize() end)
 end)
 
--- สร้างแท็บเมนู
+-- แท็บเมนู
 local FarmTab = Window:AddTab({ Title = "🌾 ฟาร์ม", Icon = "package" })
 local CombatTab = Window:AddTab({ Title = "⚔️ ต่อสู้/ESP", Icon = "sword" })
 local SettingsTab = Window:AddTab({ Title = "⚙️ ตั้งค่า", Icon = "settings" })
@@ -102,11 +88,6 @@ local SettingsTab = Window:AddTab({ Title = "⚙️ ตั้งค่า", Icon
 local Options = Fluent.Options
 
 -- ==================== แท็บฟาร์ม ====================
-FarmTab:AddParagraph({
-    Title = "🌾 ระบบฟาร์ม & ร้านค้า",
-    Content = "ฟาร์มกล่องอัจฉริยะ & ออโต้ฟาร์มรอบตัว"
-})
-
 FarmTab:AddToggle("NormalFarmToggle", {
     Title = "📦 ฟาร์มปกติ (กดอัตโนมัติรอบตัว)",
     Default = false
@@ -131,26 +112,31 @@ CombatTab:AddToggle("HeadToggle", {
     isHeadActive = Value
 end)
 
-CombatTab:AddSlider("HeadSizeSlider", {
-    Title = "ขนาดหัว",
-    Description = "ปรับขนาดหัวตัวละคร",
-    Default = 5.0,
-    Min = 0.5,
-    Max = 30.0,
-    Rounding = 1,
-}):OnChanged(function(Value)
-    currentSize = Value
-end)
+-- ช่องพิมพ์ขนาดหัวลงไปได้เลย
+CombatTab:AddInput("HeadSizeInput", {
+    Title = "📏 พิมพ์ขนาดหัว (เช่น 5, 10, 20)",
+    Default = "5.0",
+    Numeric = true,
+    Finished = true,
+    Placeholder = "ใส่ตัวเลขขนาดหัว...",
+    Callback = function(Value)
+        local num = tonumber(Value)
+        if num and num > 0 then
+            currentSize = num
+            Fluent:Notify({ Title = "ปรับขนาดสำเร็จ", Content = "ขนาดหัวถูกเปลี่ยนเป็น " .. tostring(num) .. "x แล้ว", Duration = 2 })
+        end
+    end
+})
 
 CombatTab:AddToggle("RapidFireToggle", {
-    Title = "🔥 ยิงรัวกระสุน",
+    Title = "🔥 ยิงรัวกระสุน (ปรับแก้ปืน)",
     Default = false
 }):OnChanged(function(Value)
     rapidFireActive = Value
 end)
 
 CombatTab:AddToggle("FastReloadToggle", {
-    Title = "⚡ รีโหลดไว",
+    Title = "⚡ รีโหลดไว (ปรับแก้ปืน)",
     Default = false
 }):OnChanged(function(Value)
     fastReloadActive = Value
@@ -164,7 +150,7 @@ CombatTab:AddToggle("EspToggle", {
 end)
 
 CombatTab:AddToggle("NpcEspToggle", {
-    Title = "📍 มองทะลุ NPC ที่กดตอบโต้ได้",
+    Title = "📍 มองทะลุเฉพาะ NPC ที่กด E/ตอบโต้ได้",
     Default = true
 }):OnChanged(function(Value)
     isNpcEspActive = Value
@@ -180,12 +166,6 @@ CombatTab:AddToggle("NpcEspToggle", {
 end)
 
 -- ==================== แท็บตั้งค่า ====================
-SettingsTab:AddParagraph({
-    Title = "⚙️ ตั้งค่าความลื่น & UI",
-    Content = "แสดงค่า FPS/Ping บนหน้าจอ"
-})
-
--- UI แสดง FPS & Ping สุดสวย
 local FpsGui = Instance.new("ScreenGui", PlayerGui)
 FpsGui.Name = "WxedFpsDisplay"
 FpsGui.ResetOnSpawn = false
@@ -199,7 +179,6 @@ FpsLabel.TextColor3 = Color3.fromRGB(225, 120, 255)
 FpsLabel.TextSize = 13
 FpsLabel.Font = Enum.Font.GothamBold
 FpsLabel.Text = " FPS: 60 | Ping: 0ms"
-
 Instance.new("UICorner", FpsLabel).CornerRadius = UDim.new(0, 6)
 local LabelStroke = Instance.new("UIStroke", FpsLabel)
 LabelStroke.Color = Color3.fromRGB(215, 65, 255)
@@ -242,10 +221,10 @@ SaveManager:BuildConfigSection(SettingsTab)
 Window:SelectTab(1)
 
 -- =================================================================
--- CORE LOOPS (ระบบทำงานหลังบ้าน)
+-- CORE LOOPS
 -- =================================================================
 
--- 1. ลูปจัดการ FPS, ระบบหัวใหญ่ (ตามโค้ดต้นฉบับพี่ชาย) และ ESP
+-- 1. ลูปจัดการ FPS, หัวใหญ่ และ ESP
 local lastUpdate = 0
 RunService.RenderStepped:Connect(function(dt)
     if tick() - lastUpdate >= 0.5 then
@@ -256,26 +235,23 @@ RunService.RenderStepped:Connect(function(dt)
         FpsLabel.Text = string.format(" FPS: %d | Ping: %dms", currentFps, ping)
     end
 
+    -- หัวใหญ่ & ESP ผู้เล่น
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local char = player.Character
             local head = char:FindFirstChild("Head")
             
-            -- หัวใหญ่ (ใช้โค้ดต้นฉบับที่พี่ชายให้มาเป๊ะๆ)
             if isHeadActive and head then
                 head.CanCollide = false
                 head.Massless = true
-                
                 for _, child in pairs(head:GetChildren()) do
                     if child:IsA("SpecialMesh") or child:IsA("CharacterMesh") then
                         child:Destroy()
                     end
                 end
-                
                 head.Size = Vector3.new(currentSize, currentSize, currentSize)
             end
             
-            -- ESP ผู้เล่นสีม่วง
             local highlight = char:FindFirstChild("ESPHighlight")
             if not highlight then
                 highlight = Instance.new("Highlight", char)
@@ -290,23 +266,31 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- ESP NPC เฉพาะตัวที่มี ProximityPrompt
+    -- มองทะลุเฉพาะ NPC ที่มี ProximityPrompt (ปุ่มกด E / โต้ตอบ) เท่านั้น ป้องกันโดนบ้าน/ตึก
     if isNpcEspActive then
         pcall(function()
-            for _, obj in pairs(Workspace:GetDescendants()) do
-                if obj:IsA("ProximityPrompt") and obj.Enabled then
-                    local targetModel = obj.Parent
-                    while targetModel and not targetModel:IsA("Model") and targetModel ~= Workspace do
-                        targetModel = targetModel.Parent
+            for _, prompt in pairs(Workspace:GetDescendants()) do
+                if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                    local p = prompt.Parent
+                    local targetModel = nil
+                    
+                    -- ดักหา Model ที่เป็นตัวละคร NPC โดยเฉพาะ
+                    if p then
+                        if p:IsA("Model") and p:FindFirstChildOfClass("Humanoid") then
+                            targetModel = p
+                        elseif p.Parent and p.Parent:IsA("Model") and p.Parent:FindFirstChildOfClass("Humanoid") then
+                            targetModel = p.Parent
+                        end
                     end
-                    if targetModel and targetModel:IsA("Model") and targetModel ~= LocalPlayer.Character then
+                    
+                    if targetModel and targetModel ~= LocalPlayer.Character and not Players:GetPlayerFromCharacter(targetModel) then
                         local npcHi = targetModel:FindFirstChild("NpcInteractiveHighlight")
                         if not npcHi then
                             npcHi = Instance.new("Highlight", targetModel)
                             npcHi.Name = "NpcInteractiveHighlight"
                             npcHi.Adornee = targetModel
                             npcHi.FillColor = Color3.fromRGB(0, 255, 200)
-                            npcHi.FillTransparency = 0.4
+                            npcHi.FillTransparency = 0.3
                             npcHi.OutlineColor = Color3.fromRGB(255, 255, 255)
                             npcHi.OutlineTransparency = 0
                         end
@@ -318,27 +302,41 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
--- 2. ยิงรัว & รีโหลดไว
+-- 2. ยิงรัว & รีโหลดไว (ปรับปรุงใหม่ให้ทำงานชัวร์)
 RunService.Stepped:Connect(function()
     pcall(function()
         local char = LocalPlayer.Character
         if not char then return end
-        local items = {}
-        for _, v in pairs(char:GetChildren()) do if v:IsA("Tool") then table.insert(items, v) end end
+        
+        local tools = {}
+        for _, v in pairs(char:GetChildren()) do if v:IsA("Tool") then table.insert(tools, v) end end
         local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
-        if bp then for _, v in pairs(bp:GetChildren()) do if v:IsA("Tool") then table.insert(items, v) end end end
+        if bp then for _, v in pairs(bp:GetChildren()) do if v:IsA("Tool") then table.insert(tools, v) end end end
 
-        for _, tool in pairs(items) do
+        for _, tool in pairs(tools) do
+            -- เจาะแก้ค่าใน Configuration/Settings ของปืน
             for _, v in pairs(tool:GetDescendants()) do
                 if v:IsA("NumberValue") or v:IsA("IntValue") then
                     local name = string.lower(v.Name)
-                    if rapidFireActive and (name:find("cooldown") or name:find("firerate") or name:find("delay") or name:find("fire") or name:find("speed")) then
-                        if v.Value > 0.001 then v.Value = 0.001 end
+                    if rapidFireActive and (name:find("cooldown") or name:find("firerate") or name:find("delay") or name:find("fire") or name:find("wait") or name:find("speed")) then
+                        v.Value = 0.001
                     end
-                    if fastReloadActive and name:find("reload") then
-                        if v.Value > 0.05 then v.Value = 0.05 end
+                    if fastReloadActive and (name:find("reload") or name:find("reloadtime")) then
+                        v.Value = 0.01
                     end
+                elseif v:IsA("ModuleScript") then
+                    -- ดักการทำงานของโมดูลปืน
                 end
+            end
+            
+            -- ปรับแต่ง Attributes บนตัว Tool
+            if rapidFireActive then
+                tool:SetAttribute("FireRate", 0.001)
+                tool:SetAttribute("CoolDown", 0.001)
+                tool:SetAttribute("Delay", 0.001)
+            end
+            if fastReloadActive then
+                tool:SetAttribute("ReloadTime", 0.01)
             end
         end
     end)
@@ -476,4 +474,4 @@ task.spawn(function()
     end
 end)
 
-Fluent:Notify({ Title = "WXED HUD", Content = "โหลดสคริปต์ Fluent UI + ระบบหัวใหญ่สำเร็จ!", Duration = 5 })
+Fluent:Notify({ Title = "WXED HUD", Content = "อัปเดตระบบแก้บั๊ก & ช่องพิมพ์ขนาดหัวเรียบร้อย!", Duration = 4 })
