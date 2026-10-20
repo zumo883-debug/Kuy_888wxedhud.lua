@@ -483,7 +483,8 @@ task.spawn(function()
                         end
                     end
                     if closestPrompt and targetPos then
-                        if closestDist > 5.5 then smartMoveTo(targetPos)
+                        if closestDist > 5.5 then 
+                            smartMoveTo(targetPos)
                         else
                             hum:MoveTo(root.Position)
                             if (currentTime - lastInteractTime) >= 1.2 then
@@ -498,16 +499,6 @@ task.spawn(function()
                         equipBox()
                         if (root.Position - DROPOFF_POS).Magnitude > 4.0 then
                             smartMoveTo(DROPOFF_POS)
-                        else
-                            hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 1.0 then
-                                lastInteractTime = currentTime
-                                safePrompt()
-                            end
-                        end
-                    else
-                        if (root.Position - PICKUP_POS).Magnitude > 4.0 then
-                            smartMoveTo(PICKUP_POS)
                         else
                             hum:MoveTo(root.Position)
                             if (currentTime - lastInteractTime) >= 1.0 then
@@ -536,4 +527,3 @@ task.spawn(function()
 end)
 
 Fluent:Notify({ Title = "WXED HUD", Content = "โหลดสคริปต์ฉบับสมบูรณ์สำเร็จ!", Duration = 4 })
-                        
