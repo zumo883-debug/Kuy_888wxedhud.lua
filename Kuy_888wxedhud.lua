@@ -477,14 +477,14 @@ local function safePrompt()
                     if dist <= (v.MaxActivationDistance or 14) then
                         local h = v.HoldDuration or 0
                         if v.InputHoldBegin then v:InputHoldBegin() end
-                        task.wait(h + 0.1)
+                        task.wait(h + 0.2)
                         if v.InputHoldEnd then v:InputHoldEnd() end
                         
                         if fireproximityprompt then 
                             fireproximityprompt(v) 
                         end
                         
-                        blacklistedPrompts[v] = tick() + 2.5
+                        blacklistedPrompts[v] = tick() + 3.0 
                         interacted = true
                         break
                     end
@@ -507,7 +507,7 @@ task.spawn(function()
             if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
                 local hum, root = char.Humanoid, char.HumanoidRootPart
                 
-                -- 1. ฟาร์มปกติ (เดินพอดี ไม่เลยขึ้นข้างบน)
+                -- 1. ฟาร์มปกติ
                 if normalFarmActive then
                     local closestPrompt, closestDist, targetPos = nil, math.huge, nil
                     for _, obj in pairs(Workspace:GetDescendants()) do
@@ -526,54 +526,47 @@ task.spawn(function()
                     end
                     
                     if closestPrompt and targetPos then
-                        -- ถ้าระยะห่างเกิน 4 ชัดเจน ให้เดินเข้าหา
                         if closestDist > 4.0 then 
                             smartMoveTo(targetPos)
                         else
-                            -- พอเข้าระยะ 4 ให้สั่งหยุดนิ่งทันที ไม่ให้เดินเลยปีนป่ายขึ้นไป
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 0.8 then
+                            if (currentTime - lastInteractTime) >= 1.5 then
                                 lastInteractTime = currentTime
                                 safePrompt()
                             end
                         end
                     end
 
-                -- 2. ฟาร์มกล่องอัจฉริยะ (กด E หยิบ/ส่งชัวร์ แล้วออกเดินต่อ)
+                -- 2. ฟาร์มกล่องอัจฉริยะ
                 elseif boxFarmActive then
                     if hasBox() then
                         equipBox()
-                        -- ถือกล่องแล้ว เดินไปจุดส่ง (DROPOFF)
                         if (root.Position - DROPOFF_POS).Magnitude > 4.0 then
                             smartMoveTo(DROPOFF_POS)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 0.8 then
+                            if (currentTime - lastInteractTime) >= 1.5 then
                                 lastInteractTime = currentTime
                                 safePrompt()
                                 task.wait(0.3)
                             end
                         end
                     else
-                        -- ยังไม่มีกล่อง เดินไปจุดรับ (PICKUP)
                         if (root.Position - PICKUP_POS).Magnitude > 4.0 then
                             smartMoveTo(PICKUP_POS)
                         else
-                            -- หยุดนิ่งตรงจุดรับกล่องเพื่อกด E หยิบเน้นๆ
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 0.8 then
+                            if (currentTime - lastInteractTime) >= 1.5 then
                                 lastInteractTime = currentTime
                                 safePrompt()
-                                task.wait(0.4) -- รอให้กล่องเข้ากระเป๋า แล้วลูปถัดไปจะออกเดินต่อทันที
+                                task.wait(0.5)
                             end
                         end
                     end
                 end
             end
         end)
-        task.wait(0.15)
+        task.wait(0.25) -- ปรับเป็น 0.25 วินาที ตามที่สั่งเรียบร้อยครับ!
     end
 end)
-
-
 Fluent:Notify({ Title = "WXED HUD", Content = "โหลดสคริปต์ฉบับสมบูรณ์สำเร็จ!", Duration = 4 })
