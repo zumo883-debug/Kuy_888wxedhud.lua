@@ -1,5 +1,5 @@
 -- =================================================================
--- WXED HUD - Red Knife Duel (Anti-Rubberband Safe Noclip)
+-- WXED HUD - Red Knife Duel (Optimized & Clean Syntax - Ready to Run)
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -107,7 +107,7 @@ FarmTab:AddToggle("BoxFarmToggle", {
 end)
 
 FarmTab:AddToggle("NoclipToggle", {
-    Title = "👻 เดินทะลุสิ่งกีดขวาง (แก้เด้งกลับ Anti-Rubberband)",
+    Title = "👻 เดินทะลุสิ่งกีดขวาง (Anti-Rubberband)",
     Default = false
 }):OnChanged(function(Value)
     noclipActive = Value
@@ -239,14 +239,13 @@ Window:SelectTab(1)
 -- CORE LOOPS
 -- =================================================================
 
--- 1. ระบบ Anti-Rubberband Noclip (แก้เด้งกลับนิ่งสนิท)
+-- 1. ระบบ Anti-Rubberband Noclip
 RunService.Stepped:Connect(function()
     pcall(function()
         if noclipActive and LocalPlayer.Character then
             local char = LocalPlayer.Character
             for _, part in pairs(char:GetDescendants()) do
                 if part:IsA("BasePart") then
-                    -- ปิดการชนแบบเจาะจงเฉพาะตัวส่วนแกนกลาง เพื่อหลบการตรวจจับของแอนตี้ชีต
                     if part.Name == "HumanoidRootPart" or part.Name == "UpperTorso" or part.Name == "LowerTorso" or part.Name == "Torso" or part.Name == "Head" then
                         part.CanCollide = false
                     end
@@ -507,8 +506,8 @@ task.spawn(function()
                             end
                         end
                     else
-                        if (root.Position- DROPOFF_POS).Magnitude > 4.0 then
-                            smartMoveTo(DROPOFF_POS)
+                        if (root.Position - PICKUP_POS).Magnitude > 4.0 then
+                            smartMoveTo(PICKUP_POS)
                         else
                             hum:MoveTo(root.Position)
                             if (currentTime - lastInteractTime) >= 1.0 then
@@ -536,4 +535,5 @@ task.spawn(function()
     end
 end)
 
-Fluent:Notify({ Title = "WXED HUD", Content = "อัปเดตระบบ Noclip ป้องกันการเด้งกลับ (Anti-Rubberband) เรียบร้อย!", Duration = 4 })
+Fluent:Notify({ Title = "WXED HUD", Content = "โหลดสคริปต์ฉบับสมบูรณ์สำเร็จ!", Duration = 4 })
+                        
