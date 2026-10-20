@@ -1,5 +1,5 @@
 -- =================================================================
--- WXED HUD - Red Knife Duel (Fluent UI - Fixed Features & Text Input)
+-- WXED HUD - Red Knife Duel (Anti-Rubberband Safe Noclip)
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -31,6 +31,8 @@ local normalFarmActive = false
 local boxFarmActive = false
 local rapidFireActive = false
 local fastReloadActive = false
+local infAmmoActive = false
+local noclipActive = false
 
 -- พิกัดจุดฟาร์มกล่อง / ส่งของ
 local PICKUP_POS = Vector3.new(-294.2, 25.0, 36.6)
@@ -97,11 +99,18 @@ FarmTab:AddToggle("NormalFarmToggle", {
 end)
 
 FarmTab:AddToggle("BoxFarmToggle", {
-    Title = "📦 ฟาร์มกล่องอัจฉริยะ (หยิบ ➔ อ้อม ➔ ส่ง)",
+    Title = "📦 ฟาร์มกล่องอัจฉริยะ (หยิบ ➔ ส่ง)",
     Default = false
 }):OnChanged(function(Value)
     boxFarmActive = Value
     if Value then normalFarmActive = false if Options.NormalFarmToggle then Options.NormalFarmToggle:SetValue(false) end end
+end)
+
+FarmTab:AddToggle("NoclipToggle", {
+    Title = "👻 เดินทะลุสิ่งกีดขวาง (แก้เด้งกลับ Anti-Rubberband)",
+    Default = false
+}):OnChanged(function(Value)
+    noclipActive = Value
 end)
 
 -- ==================== แท็บต่อสู้/ESP ====================
@@ -112,7 +121,6 @@ CombatTab:AddToggle("HeadToggle", {
     isHeadActive = Value
 end)
 
--- ช่องพิมพ์ขนาดหัวลงไปได้เลย
 CombatTab:AddInput("HeadSizeInput", {
     Title = "📏 พิมพ์ขนาดหัว (เช่น 5, 10, 20)",
     Default = "5.0",
@@ -128,15 +136,22 @@ CombatTab:AddInput("HeadSizeInput", {
     end
 })
 
+CombatTab:AddToggle("InfAmmoToggle", {
+    Title = "♾️ กระสุนไม่จำกัด (Infinite Ammo)",
+    Default = false
+}):OnChanged(function(Value)
+    infAmmoActive = Value
+end)
+
 CombatTab:AddToggle("RapidFireToggle", {
-    Title = "🔥 ยิงรัวกระสุน (ปรับแก้ปืน)",
+    Title = "🔥 ยิงรัวกระสุน",
     Default = false
 }):OnChanged(function(Value)
     rapidFireActive = Value
 end)
 
 CombatTab:AddToggle("FastReloadToggle", {
-    Title = "⚡ รีโหลดไว (ปรับแก้ปืน)",
+    Title = "⚡ รีโหลดไว",
     Default = false
 }):OnChanged(function(Value)
     fastReloadActive = Value
@@ -224,7 +239,24 @@ Window:SelectTab(1)
 -- CORE LOOPS
 -- =================================================================
 
--- 1. ลูปจัดการ FPS, หัวใหญ่ และ ESP
+-- 1. ระบบ Anti-Rubberband Noclip (แก้เด้งกลับนิ่งสนิท)
+RunService.Stepped:Connect(function()
+    pcall(function()
+        if noclipActive and LocalPlayer.Character then
+            local char = LocalPlayer.Character
+            for _, part in pairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    -- ปิดการชนแบบเจาะจงเฉพาะตัวส่วนแกนกลาง เพื่อหลบการตรวจจับของแอนตี้ชีต
+                    if part.Name == "HumanoidRootPart" or part.Name == "UpperTorso" or part.Name == "LowerTorso" or part.Name == "Torso" or part.Name == "Head" then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+-- 2. ลูปจัดการ FPS, หัวใหญ่ และ ESP
 local lastUpdate = 0
 RunService.RenderStepped:Connect(function(dt)
     if tick() - lastUpdate >= 0.5 then
@@ -266,7 +298,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- มองทะลุเฉพาะ NPC ที่มี ProximityPrompt (ปุ่มกด E / โต้ตอบ) เท่านั้น ป้องกันโดนบ้าน/ตึก
+    -- มองทะลุเฉพาะ NPC ที่มี ProximityPrompt
     if isNpcEspActive then
         pcall(function()
             for _, prompt in pairs(Workspace:GetDescendants()) do
@@ -274,7 +306,6 @@ RunService.RenderStepped:Connect(function(dt)
                     local p = prompt.Parent
                     local targetModel = nil
                     
-                    -- ดักหา Model ที่เป็นตัวละคร NPC โดยเฉพาะ
                     if p then
                         if p:IsA("Model") and p:FindFirstChildOfClass("Humanoid") then
                             targetModel = p
@@ -302,7 +333,7 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
--- 2. ยิงรัว & รีโหลดไว (ปรับปรุงใหม่ให้ทำงานชัวร์)
+-- 3. ยิงรัว, รีโหลดไว & กระสุนไม่จำกัด
 RunService.Stepped:Connect(function()
     pcall(function()
         local char = LocalPlayer.Character
@@ -314,7 +345,6 @@ RunService.Stepped:Connect(function()
         if bp then for _, v in pairs(bp:GetChildren()) do if v:IsA("Tool") then table.insert(tools, v) end end end
 
         for _, tool in pairs(tools) do
-            -- เจาะแก้ค่าใน Configuration/Settings ของปืน
             for _, v in pairs(tool:GetDescendants()) do
                 if v:IsA("NumberValue") or v:IsA("IntValue") then
                     local name = string.lower(v.Name)
@@ -324,56 +354,82 @@ RunService.Stepped:Connect(function()
                     if fastReloadActive and (name:find("reload") or name:find("reloadtime")) then
                         v.Value = 0.01
                     end
-                elseif v:IsA("ModuleScript") then
-                    -- ดักการทำงานของโมดูลปืน
+                    if infAmmoActive and (name:find("ammo") or name:find("clip") or name:find("maxammo") or name:find("storedammo")) then
+                        if v.Value < 999 then v.Value = 999 end
+                    end
                 end
             end
             
-            -- ปรับแต่ง Attributes บนตัว Tool
             if rapidFireActive then
                 tool:SetAttribute("FireRate", 0.001)
                 tool:SetAttribute("CoolDown", 0.001)
-                tool:SetAttribute("Delay", 0.001)
             end
-            if fastReloadActive then
-                tool:SetAttribute("ReloadTime", 0.01)
+            if fastReloadActive then tool:SetAttribute("ReloadTime", 0.01) end
+            if infAmmoActive then
+                tool:SetAttribute("Ammo", 999)
+                tool:SetAttribute("MaxAmmo", 999)
+                tool:SetAttribute("StoredAmmo", 999)
             end
         end
     end)
 end)
 
--- 3. ระบบฟาร์ม
+-- 4. ระบบฟาร์มกล่องอัจฉริยะ
 local function safePrompt()
+    local interacted = false
     pcall(function()
         for _, v in pairs(Workspace:GetDescendants()) do
             if v:IsA("ProximityPrompt") and v.Enabled and not blacklistedPrompts[v] then
                 local p = v.Parent
                 local pos = p:IsA("BasePart") and p.Position or (p:IsA("Model") and p:GetPivot().Position or nil)
                 if pos and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    if (LocalPlayer.Character.HumanoidRootPart.Position - pos).Magnitude <= (v.MaxActivationDistance or 12) then
+                    if (LocalPlayer.Character.HumanoidRootPart.Position - pos).Magnitude <= (v.MaxActivationDistance or 14) then
                         local h = v.HoldDuration or 0
                         if v.InputHoldBegin then v:InputHoldBegin() end
-                        task.wait(h + 0.15)
+                        task.wait(h + 0.2)
                         if v.InputHoldEnd then v:InputHoldEnd() end
-                        if fireproximityprompt and h == 0 then fireproximityprompt(v) end
-                        blacklistedPrompts[v] = tick() + 5
+                        if fireproximityprompt then fireproximityprompt(v) end
+                        blacklistedPrompts[v] = tick() + 3
+                        interacted = true
                         break
                     end
                 end
             end
         end
     end)
+    return interacted
 end
 
 local function hasBox()
     local char = LocalPlayer.Character
     if not char then return false end
     for _, v in pairs(char:GetChildren()) do
-        if v:IsA("Tool") and (string.find(string.lower(v.Name), "box") or string.find(string.lower(v.Name), "crate") or string.find(string.lower(v.Name), "ปูน")) then
+        if v:IsA("Tool") and (string.find(string.lower(v.Name), "box") or string.find(string.lower(v.Name), "crate") or string.find(string.lower(v.Name), "ปูน") or string.find(string.lower(v.Name), "กล่อง")) then
             return true
         end
     end
+    local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
+    if bp then
+        for _, v in pairs(bp:GetChildren()) do
+            if v:IsA("Tool") and (string.find(string.lower(v.Name), "box") or string.find(string.lower(v.Name), "crate") or string.find(string.lower(v.Name), "ปูน") or string.find(string.lower(v.Name), "กล่อง")) then
+                return true
+            end
+        end
+    end
     return false
+end
+
+local function equipBox()
+    local char = LocalPlayer.Character
+    local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
+    if char and bp then
+        for _, t in pairs(bp:GetChildren()) do
+            if t:IsA("Tool") and (string.find(string.lower(t.Name), "box") or string.find(string.lower(t.Name), "crate") or string.find(string.lower(t.Name), "ปูน") or string.find(string.lower(t.Name), "กล่อง")) then
+                t.Parent = char
+                break
+            end
+        end
+    end
 end
 
 local function smartMoveTo(targetPos)
@@ -389,8 +445,8 @@ local function smartMoveTo(targetPos)
             if wp.Action == Enum.PathWaypointAction.Jump then humanoid.Jump = true end
             local reached, conn = false, nil
             conn = humanoid.MoveToFinished:Connect(function() reached = true conn:Disconnect() end)
-            local timeout = tick() + 1.5
-            while not reached and tick() < timeout do task.wait(0.1) end
+            local timeout = tick() + 1.2
+            while not reached and tick() < timeout do task.wait(0.05) end
             if conn then conn:Disconnect() end
         end
     else
@@ -398,6 +454,7 @@ local function smartMoveTo(targetPos)
     end
 end
 
+-- ลูปเดินฟาร์มหลัก
 task.spawn(function()
     while true do
         pcall(function()
@@ -430,7 +487,7 @@ task.spawn(function()
                         if closestDist > 5.5 then smartMoveTo(targetPos)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 1.3 then
+                            if (currentTime - lastInteractTime) >= 1.2 then
                                 lastInteractTime = currentTime
                                 safePrompt()
                             end
@@ -439,39 +496,44 @@ task.spawn(function()
 
                 elseif boxFarmActive then
                     if hasBox() then
-                        if (root.Position - DROPOFF_POS).Magnitude > 3.5 then smartMoveTo(DROPOFF_POS)
+                        equipBox()
+                        if (root.Position - DROPOFF_POS).Magnitude > 4.0 then
+                            smartMoveTo(DROPOFF_POS)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 1.3 then
+                            if (currentTime - lastInteractTime) >= 1.0 then
                                 lastInteractTime = currentTime
                                 safePrompt()
                             end
                         end
                     else
-                        if (root.Position - PICKUP_POS).Magnitude > 4.0 then smartMoveTo(PICKUP_POS)
-                        elseif (root.Position - WAYPOINT_POS).Magnitude > 8.0 and root.Position.Z < (WAYPOINT_POS.Z - 20) then smartMoveTo(WAYPOINT_POS)
+                        if (root.Position- DROPOFF_POS).Magnitude > 4.0 then
+                            smartMoveTo(DROPOFF_POS)
                         else
                             hum:MoveTo(root.Position)
-                            local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
-                            if bp then
-                                for _, t in pairs(bp:GetChildren()) do
-                                    if t:IsA("Tool") and (string.find(string.lower(t.Name), "box") or string.find(string.lower(t.Name), "crate") or string.find(string.lower(t.Name), "ปูน")) then
-                                        t.Parent = char
-                                        break
-                                    end
-                                end
-                            end
-                            if (currentTime - lastInteractTime) >= 1.3 then
+                            if (currentTime - lastInteractTime) >= 1.0 then
                                 lastInteractTime = currentTime
                                 safePrompt()
+                            end
+                        end
+                    else
+                        if (root.Position - PICKUP_POS).Magnitude > 4.0 then
+                            smartMoveTo(PICKUP_POS)
+                        else
+                            hum:MoveTo(root.Position)
+                            task.wait(0.2)
+                            if (currentTime - lastInteractTime) >= 1.0 then
+                                lastInteractTime = currentTime
+                                safePrompt()
+                                task.wait(0.5)
                             end
                         end
                     end
                 end
             end
         end)
-        task.wait(0.25)
+        task.wait(0.2)
     end
 end)
 
-Fluent:Notify({ Title = "WXED HUD", Content = "อัปเดตระบบแก้บั๊ก & ช่องพิมพ์ขนาดหัวเรียบร้อย!", Duration = 4 })
+Fluent:Notify({ Title = "WXED HUD", Content = "อัปเดตระบบ Noclip ป้องกันการเด้งกลับ (Anti-Rubberband) เรียบร้อย!", Duration = 4 })
