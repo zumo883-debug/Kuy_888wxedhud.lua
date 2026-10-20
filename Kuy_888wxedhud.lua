@@ -1,5 +1,5 @@
 -- =================================================================
--- WXED HUD - Red Knife Duel (Optimized & Clean Syntax - Ready to Run)
+-- WXED HUD - Red Knife Duel (Ultimate Edition - All Features)
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -22,7 +22,7 @@ if not success or not Fluent then return end
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- สถานะการทำงาน
+-- สถานะการทำงานทั้งหมด
 local currentSize = 5.0
 local isHeadActive = true
 local isEspActive = true
@@ -33,6 +33,7 @@ local rapidFireActive = false
 local fastReloadActive = false
 local infAmmoActive = false
 local noclipActive = false
+local killAllActive = false
 
 -- พิกัดจุดฟาร์มกล่อง / ส่งของ
 local PICKUP_POS = Vector3.new(-294.2, 25.0, 36.6)
@@ -53,7 +54,7 @@ end)
 
 -- หน้าต่าง Fluent UI
 local Window = Fluent:CreateWindow({
-    Title = "💜 WXED HUD | ดวลมีดแดง",
+    Title = "💜 WXED HUD | ดวลมีดแดง Ultimate",
     SubTitle = "by WXED",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -84,14 +85,15 @@ end)
 
 -- แท็บเมนู
 local FarmTab = Window:AddTab({ Title = "🌾 ฟาร์ม", Icon = "package" })
-local CombatTab = Window:AddTab({ Title = "⚔️ ต่อสู้/ESP", Icon = "sword" })
+local CombatTab = Window:AddTab({ Title = "⚔️ ต่อสู้/ยิง", Icon = "sword" })
+local VisualTab = Window:AddTab({ Title = "👁️ ESP/ตัวละคร", Icon = "eye" })
 local SettingsTab = Window:AddTab({ Title = "⚙️ ตั้งค่า", Icon = "settings" })
 
 local Options = Fluent.Options
 
 -- ==================== แท็บฟาร์ม ====================
 FarmTab:AddToggle("NormalFarmToggle", {
-    Title = "📦 ฟาร์มปกติ (กดอัตโนมัติรอบตัว)",
+    Title = "📦 ฟาร์มปกติ (กดอัตโนมัติรอบตัว - กันปีน)",
     Default = false
 }):OnChanged(function(Value)
     normalFarmActive = Value
@@ -107,21 +109,50 @@ FarmTab:AddToggle("BoxFarmToggle", {
 end)
 
 FarmTab:AddToggle("NoclipToggle", {
-    Title = "👻 เดินทะลุสิ่งกีดขวาง (Anti-Rubberband)",
+    Title = "👻 เดินทะลุสิ่งกีดขวาง (Noclip)",
     Default = false
 }):OnChanged(function(Value)
     noclipActive = Value
 end)
 
--- ==================== แท็บต่อสู้/ESP ====================
-CombatTab:AddToggle("HeadToggle", {
+-- ==================== แท็บต่อสู้/ยิง ====================
+CombatTab:AddToggle("KillAllToggle", {
+    Title = "💀 ฆ่าทั้งหมด (Kill All / Auto Attack)",
+    Default = false
+}):OnChanged(function(Value)
+    killAllActive = Value
+end)
+
+CombatTab:AddToggle("RapidFireToggle", {
+    Title = "🔥 ยิงรัวกระสุน (Rapid Fire)",
+    Default = false
+}):OnChanged(function(Value)
+    rapidFireActive = Value
+end)
+
+CombatTab:AddToggle("FastReloadToggle", {
+    Title = "⚡ รีโหลดไว (Fast Reload)",
+    Default = false
+}):OnChanged(function(Value)
+    fastReloadActive = Value
+end)
+
+CombatTab:AddToggle("InfAmmoToggle", {
+    Title = "♾️ กระสุนไม่จำกัด (Infinite Ammo)",
+    Default = false
+}):OnChanged(function(Value)
+    infAmmoActive = Value
+end)
+
+-- ==================== แท็บ ESP/ตัวละคร ====================
+VisualTab:AddToggle("HeadToggle", {
     Title = "🎯 ระบบหัวใหญ่ (Head Expander)",
     Default = true
 }):OnChanged(function(Value)
     isHeadActive = Value
 end)
 
-CombatTab:AddInput("HeadSizeInput", {
+VisualTab:AddInput("HeadSizeInput", {
     Title = "📏 พิมพ์ขนาดหัว (เช่น 5, 10, 20)",
     Default = "5.0",
     Numeric = true,
@@ -136,35 +167,14 @@ CombatTab:AddInput("HeadSizeInput", {
     end
 })
 
-CombatTab:AddToggle("InfAmmoToggle", {
-    Title = "♾️ กระสุนไม่จำกัด (Infinite Ammo)",
-    Default = false
-}):OnChanged(function(Value)
-    infAmmoActive = Value
-end)
-
-CombatTab:AddToggle("RapidFireToggle", {
-    Title = "🔥 ยิงรัวกระสุน",
-    Default = false
-}):OnChanged(function(Value)
-    rapidFireActive = Value
-end)
-
-CombatTab:AddToggle("FastReloadToggle", {
-    Title = "⚡ รีโหลดไว",
-    Default = false
-}):OnChanged(function(Value)
-    fastReloadActive = Value
-end)
-
-CombatTab:AddToggle("EspToggle", {
+VisualTab:AddToggle("EspToggle", {
     Title = "👁️ มองทะลุผู้เล่น (ESP สีม่วง)",
     Default = true
 }):OnChanged(function(Value)
     isEspActive = Value
 end)
 
-CombatTab:AddToggle("NpcEspToggle", {
+VisualTab:AddToggle("NpcEspToggle", {
     Title = "📍 มองทะลุเฉพาะ NPC ที่กด E/ตอบโต้ได้",
     Default = true
 }):OnChanged(function(Value)
@@ -239,7 +249,7 @@ Window:SelectTab(1)
 -- CORE LOOPS
 -- =================================================================
 
--- 1. ระบบ Anti-Rubberband Noclip
+-- 1. ระบบ Noclip
 RunService.Stepped:Connect(function()
     pcall(function()
         if noclipActive and LocalPlayer.Character then
@@ -255,7 +265,7 @@ RunService.Stepped:Connect(function()
     end)
 end)
 
--- 2. ลูปจัดการ FPS, หัวใหญ่ และ ESP
+-- 2. ลูปจัดการ FPS, หัวใหญ่, และ ESP
 local lastUpdate = 0
 RunService.RenderStepped:Connect(function(dt)
     if tick() - lastUpdate >= 0.5 then
@@ -304,7 +314,6 @@ RunService.RenderStepped:Connect(function(dt)
                 if prompt:IsA("ProximityPrompt") and prompt.Enabled then
                     local p = prompt.Parent
                     local targetModel = nil
-                    
                     if p then
                         if p:IsA("Model") and p:FindFirstChildOfClass("Humanoid") then
                             targetModel = p
@@ -312,7 +321,6 @@ RunService.RenderStepped:Connect(function(dt)
                             targetModel = p.Parent
                         end
                     end
-                    
                     if targetModel and targetModel ~= LocalPlayer.Character and not Players:GetPlayerFromCharacter(targetModel) then
                         local npcHi = targetModel:FindFirstChild("NpcInteractiveHighlight")
                         if not npcHi then
@@ -332,7 +340,7 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
--- 3. ยิงรัว, รีโหลดไว & กระสุนไม่จำกัด (อัปเกรดใหม่ ดึงค่าจากตัวปืนและรีโมทเกม)
+-- 3. ระบบยิงรัว, รีโหลดไว, กระสุนไม่จำกัด & ฆ่าทั้งหมด (Kill All)
 RunService.Stepped:Connect(function()
     pcall(function()
         local char = LocalPlayer.Character
@@ -343,8 +351,23 @@ RunService.Stepped:Connect(function()
         local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
         if bp then for _, v in pairs(bp:GetChildren()) do if v:IsA("Tool") then table.insert(tools, v) end end end
 
+        -- ฟังก์ชันฆ่าทั้งหมด (Kill All)
+        if killAllActive and char:FindFirstChild("HumanoidRootPart") then
+            local root = char.HumanoidRootPart
+            for _, target in pairs(Players:GetPlayers()) do
+                if target ~= LocalPlayer and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                    local targetRoot = target.Character.HumanoidRootPart
+                    if (root.Position - targetRoot.Position).Magnitude <= 25 then
+                        local toolObj = char:FindFirstChildOfClass("Tool")
+                        if toolObj then toolObj:Activate() end
+                    end
+                end
+            end
+        end
+
         for _, tool in pairs(tools) do
-            -- 1. เจาะแก้ค่า Value ข้างในปืน
+            if rapidFireActive then tool:Activate() end
+            
             for _, v in pairs(tool:GetDescendants()) do
                 if v:IsA("NumberValue") or v:IsA("IntValue") then
                     local name = string.lower(v.Name)
@@ -360,15 +383,12 @@ RunService.Stepped:Connect(function()
                 end
             end
             
-            -- 2. เจาะแก้ค่า Attributes บนตัว Tool (บังคับค้างไว้)
             if rapidFireActive then
                 tool:SetAttribute("FireRate", 0.001)
                 tool:SetAttribute("CoolDown", 0.001)
                 tool:SetAttribute("Delay", 0.001)
             end
-            if fastReloadActive then 
-                tool:SetAttribute("ReloadTime", 0.01) 
-            end
+            if fastReloadActive then tool:SetAttribute("ReloadTime", 0.01) end
             if infAmmoActive then
                 tool:SetAttribute("Ammo", 9999)
                 tool:SetAttribute("MaxAmmo", 9999)
@@ -380,8 +400,7 @@ RunService.Stepped:Connect(function()
     end)
 end)
 
-
--- 4. ระบบฟาร์มกล่องอัจฉริยะ
+-- 4. ระบบฟาร์มกล่อง & ฟาร์มปกติ (คำนวณจุดยืน 3.5 studs กันปีน + กด E ชัวร์)
 local function safePrompt()
     local interacted = false
     pcall(function()
@@ -411,14 +430,14 @@ local function hasBox()
     local char = LocalPlayer.Character
     if not char then return false end
     for _, v in pairs(char:GetChildren()) do
-        if v:IsA("Tool") and (string.find(string.lower(v.Name), "box") or string.find(string.lower(v.Name), "crate") or string.find(string.lower(v.Name), "ปูน") or string.find(string.lower(v.Name), "กล่อง")) then
+        if v:IsA("Tool") and (string.find(string.lower(v.Name), "box") or string.find(string.lower(v.Name), "crate") or string.find(string.lower(v.Name), "กล่อง")) then
             return true
         end
     end
     local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
     if bp then
         for _, v in pairs(bp:GetChildren()) do
-            if v:IsA("Tool") and (string.find(string.lower(v.Name), "box") or string.find(string.lower(v.Name), "crate") or string.find(string.lower(v.Name), "ปูน") or string.find(string.lower(v.Name), "กล่อง")) then
+            if v:IsA("Tool") and (string.find(string.lower(v.Name), "box") or string.find(string.lower(v.Name), "crate") or string.find(string.lower(v.Name), "กล่อง")) then
                 return true
             end
         end
@@ -431,7 +450,7 @@ local function equipBox()
     local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
     if char and bp then
         for _, t in pairs(bp:GetChildren()) do
-            if t:IsA("Tool") and (string.find(string.lower(t.Name), "box") or string.find(string.lower(t.Name), "crate") or string.find(string.lower(t.Name), "ปูน") or string.find(string.lower(t.Name), "กล่อง")) then
+            if t:IsA("Tool") and (string.find(string.lower(t.Name), "box") or string.find(string.lower(t.Name), "crate") or string.find(string.lower(t.Name), "กล่อง")) then
                 t.Parent = char
                 break
             end
@@ -439,38 +458,11 @@ local function equipBox()
     end
 end
 
-local function smartMoveTo(targetPos)
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("Humanoid") or not char:FindFirstChild("HumanoidRootPart") then return end
-    local humanoid, rootPart = char.Humanoid, char.HumanoidRootPart
-
-    local path = PathfindingService:CreatePath({ AgentRadius = 2, AgentHeight = 5, AgentCanJump = true })
-    if pcall(function() path:ComputeAsync(rootPart.Position, targetPos) end) and path.Status == Enum.PathStatus.Success then
-        for _, wp in ipairs(path:GetWaypoints()) do
-            if not boxFarmActive and not normalFarmActive then break end
-            humanoid:MoveTo(wp.Position)
-            if wp.Action == Enum.PathWaypointAction.Jump then humanoid.Jump = true end
-            local reached, conn = false, nil
-            conn = humanoid.MoveToFinished:Connect(function() reached = true conn:Disconnect() end)
-            local timeout = tick() + 1.2
-            while not reached and tick() < timeout do task.wait(0.05) end
-            if conn then conn:Disconnect() end
-        end
-    else
-        humanoid:MoveTo(targetPos)
-    end
-end
-
--- =================================================================
--- ลูปเดินฟาร์มหลัก (แก้ปัญหาไม่ยอมกด E และไม่เดินเตลิด)
--- =================================================================
-
 local function getStandPosition(targetPos, playerPos)
     local direction = (playerPos - targetPos).Unit
     return targetPos + (direction * 3.5)
 end
 
--- ฟังก์ชันกด ProximityPrompt แบบบังคับทำงานชัวร์ 100%
 local function forceTriggerPrompt(targetPrompt)
     pcall(function()
         if targetPrompt and targetPrompt.Enabled then
@@ -478,10 +470,7 @@ local function forceTriggerPrompt(targetPrompt)
             if targetPrompt.InputHoldBegin then targetPrompt:InputHoldBegin() end
             if h > 0 then task.wait(h + 0.1) else task.wait(0.1) end
             if targetPrompt.InputHoldEnd then targetPrompt:InputHoldEnd() end
-            
-            if fireproximityprompt then
-                fireproximityprompt(targetPrompt)
-            end
+            if fireproximityprompt then fireproximityprompt(targetPrompt) end
         end
     end)
 end
@@ -498,7 +487,7 @@ task.spawn(function()
             if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
                 local hum, root = char.Humanoid, char.HumanoidRootPart
                 
-                -- 1. ฟาร์มปกติ
+                -- 1. ฟาร์มปกติ (จำกัดระยะ 25 studs, ยืน 3.5 studs กันปีน)
                 if normalFarmActive then
                     local closestPrompt, closestDist, targetPos = nil, math.huge, nil
                     for _, obj in pairs(Workspace:GetDescendants()) do
@@ -518,60 +507,41 @@ task.spawn(function()
                     
                     if closestPrompt and targetPos then
                         local standPos = getStandPosition(targetPos, root.Position)
-                        
                         if closestDist > 4.0 then
-                            smartMoveTo(Vector3.new(standPos.X, root.Position.Y, standPos.Z))
+                            hum:MoveTo(Vector3.new(standPos.X, root.Position.Y, standPos.Z))
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastClickTime) >= 0.6 then
-                                lastClickTime = currentTime
+                            if (currentTime - las                            if (currentTime - lastInteractTime) >= 0.6 then
+                                lastInteractTime = currentTime
                                 forceTriggerPrompt(closestPrompt)
                             end
                         end
                     end
 
-                -- 2. ฟาร์มกล่องอัจฉริยะ
+                -- 2. ฟาร์มกล่องอัจฉริยะ (หยิบ ➔ ส่ง)
                 elseif boxFarmActive then
                     if hasBox() then
                         equipBox()
                         local distToDrop = (root.Position - DROPOFF_POS).Magnitude
                         if distToDrop > 4.0 then
-                            smartMoveTo(DROPOFF_POS)
+                            hum:MoveTo(DROPOFF_POS)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastClickTime) >= 0.6 then
-                                lastClickTime = currentTime
-                                for _, v in pairs(Workspace:GetDescendants()) do
-                                    if v:IsA("ProximityPrompt") and v.Enabled then
-                                        local p = v.Parent
-                                        local pos = p:IsA("BasePart") and p.Position or (p:IsA("Model") and p:GetPivot().Position or nil)
-                                        if pos and (pos - DROPOFF_POS).Magnitude <= 8 then
-                                            forceTriggerPrompt(v)
-                                            break
-                                        end
-                                    end
-                                end
+                            if (currentTime - lastInteractTime) >= 0.6 then
+                                lastInteractTime = currentTime
+                                safePrompt()
                                 task.wait(0.3)
                             end
                         end
                     else
                         local distToPick = (root.Position - PICKUP_POS).Magnitude
                         if distToPick > 4.0 then
-                            smartMoveTo(PICKUP_POS)
+                            hum:MoveTo(PICKUP_POS)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastClickTime) >= 0.6 then
-                                lastClickTime = currentTime
-                                for _, v in pairs(Workspace:GetDescendants()) do
-                                    if v:IsA("ProximityPrompt") and v.Enabled then
-                                        local p = v.Parent
-                                        local pos = p:IsA("BasePart") and p.Position or (p:IsA("Model") and p:GetPivot().Position or nil)
-                                        if pos and (pos - PICKUP_POS).Magnitude <= 8 then
-                                            forceTriggerPrompt(v)
-                                            break
-                                        end
-                                    end
-                                end
+                            if (currentTime - lastInteractTime) >= 0.6 then
+                                lastInteractTime = currentTime
+                                safePrompt()
                                 task.wait(0.4)
                             end
                         end
@@ -582,3 +552,4 @@ task.spawn(function()
         task.wait(0.15)
     end
 end)
+        
