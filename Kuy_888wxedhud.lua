@@ -462,7 +462,7 @@ local function smartMoveTo(targetPos)
 end
 
 -- =================================================================
--- ลูปเดินฟาร์มหลัก (จำกัดระยะตรวจจับกันเดินหลุด + หยุดกดพอดีเป๊ะ)
+-- ลูปเดินฟาร์มหลัก (แก้ปัญหาไม่ยอมกด E และไม่เดินเตลิด)
 -- =================================================================
 
 local function getStandPosition(targetPos, playerPos)
@@ -470,7 +470,7 @@ local function getStandPosition(targetPos, playerPos)
     return targetPos + (direction * 3.5)
 end
 
--- ฟังก์ชันกด ProximityPrompt แบบเน้นย้ำความแม่นยำ
+-- ฟังก์ชันกด ProximityPrompt แบบบังคับทำงานชัวร์ 100%
 local function forceTriggerPrompt(targetPrompt)
     pcall(function()
         if targetPrompt and targetPrompt.Enabled then
@@ -498,7 +498,7 @@ task.spawn(function()
             if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
                 local hum, root = char.Humanoid, char.HumanoidRootPart
                 
-                -- 1. ฟาร์มปกติ (จำกัดระยะไม่เกิน 25 Studs กันเดินหลุดไปที่อื่น)
+                -- 1. ฟาร์มปกติ
                 if normalFarmActive then
                     local closestPrompt, closestDist, targetPos = nil, math.huge, nil
                     for _, obj in pairs(Workspace:GetDescendants()) do
@@ -507,7 +507,6 @@ task.spawn(function()
                             local pos = p:IsA("BasePart") and p.Position or (p:IsA("Model") and p:GetPivot().Position or nil)
                             if pos then
                                 local dist = (root.Position - pos).Magnitude
-                                -- กรองเฉพาะ ProximityPrompt ในระยะไม่เกิน 25 studs เท่านั้น กันเดินหลุด
                                 if dist <= 25 and dist < closestDist then
                                     closestDist = dist
                                     closestPrompt = obj
@@ -520,11 +519,9 @@ task.spawn(function()
                     if closestPrompt and targetPos then
                         local standPos = getStandPosition(targetPos, root.Position)
                         
-                        -- ถ้าระยะห่างเกิน 4.0 Studs ให้เดินเข้าหาจุดยืนด้านข้าง
                         if closestDist > 4.0 then
                             smartMoveTo(Vector3.new(standPos.X, root.Position.Y, standPos.Z))
                         else
-                            -- พอเข้าระยะ 4.0 Studs สั่งหยุดเดินนิ่งทันที แล้วกด E
                             hum:MoveTo(root.Position)
                             if (currentTime - lastClickTime) >= 0.6 then
                                 lastClickTime = currentTime
@@ -533,7 +530,7 @@ task.spawn(function()
                         end
                     end
 
-                -- 2. ฟาร์มกล่องอัจฉริยะ (ล็อกระยะจุดรับ/จุดส่ง ชัดเจน)
+                -- 2. ฟาร์มกล่องอัจฉริยะ
                 elseif boxFarmActive then
                     if hasBox() then
                         equipBox()
@@ -544,7 +541,6 @@ task.spawn(function()
                             hum:MoveTo(root.Position)
                             if (currentTime - lastClickTime) >= 0.6 then
                                 lastClickTime = currentTime
-                                -- วนหา Prompt ตรงจุดส่งแล้วกด
                                 for _, v in pairs(Workspace:GetDescendants()) do
                                     if v:IsA("ProximityPrompt") and v.Enabled then
                                         local p = v.Parent
@@ -566,7 +562,6 @@ task.spawn(function()
                             hum:MoveTo(root.Position)
                             if (currentTime - lastClickTime) >= 0.6 then
                                 lastClickTime = currentTime
-                                -- วนหา Prompt ตรงจุดรับกล่องแล้วกดหยิบ
                                 for _, v in pairs(Workspace:GetDescendants()) do
                                     if v:IsA("ProximityPrompt") and v.Enabled then
                                         local p = v.Parent
