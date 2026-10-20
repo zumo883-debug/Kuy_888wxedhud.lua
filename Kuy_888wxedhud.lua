@@ -462,7 +462,7 @@ local function smartMoveTo(targetPos)
 end
 
 -- =================================================================
--- ลูปเดินฟาร์มหลัก (เว้นระยะเวลา 0.6s และ ลูป 0.15s ตามโค้ดต้นฉบับเป๊ะ)
+-- ลูปเดินฟาร์มหลัก (จำกัดระยะตรวจจับกันเดินหลุด + หยุดกดพอดีเป๊ะ)
 -- =================================================================
 
 local function getStandPosition(targetPos, playerPos)
@@ -470,26 +470,20 @@ local function getStandPosition(targetPos, playerPos)
     return targetPos + (direction * 3.5)
 end
 
-local function triggerPromptNaturally(prompt)
-    if not prompt or not prompt.Enabled then return false end
-    local holdTime = prompt.HoldDuration or 0
-    
+-- ฟังก์ชันกด ProximityPrompt แบบเน้นย้ำความแม่นยำ
+local function forceTriggerPrompt(targetPrompt)
     pcall(function()
-        prompt:InputHoldBegin()
-        if holdTime > 0 then
-            task.wait(holdTime + 0.1)
-        else
-            task.wait(0.1)
+        if targetPrompt and targetPrompt.Enabled then
+            local h = targetPrompt.HoldDuration or 0
+            if targetPrompt.InputHoldBegin then targetPrompt:InputHoldBegin() end
+            if h > 0 then task.wait(h + 0.1) else task.wait(0.1) end
+            if targetPrompt.InputHoldEnd then targetPrompt:InputHoldEnd() end
+            
+            if fireproximityprompt then
+                fireproximityprompt(targetPrompt)
+            end
         end
-        prompt:InputHoldEnd()
     end)
-    
-    if fireproximityprompt and holdTime == 0 then
-        pcall(function()
-            fireproximityprompt(prompt)
-        end)
-    end
-    return true
 end
 
 task.spawn(function()
@@ -504,7 +498,7 @@ task.spawn(function()
             if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
                 local hum, root = char.Humanoid, char.HumanoidRootPart
                 
-                -- 1. ฟาร์มปกติ (ตามโค้ดต้นฉบับ)
+                -- 1. ฟาร์มปกติ (จำกัดระยะไม่เกิน 25 Studs กันเดินหลุดไปที่อื่น)
                 if normalFarmActive then
                     local closestPrompt, closestDist, targetPos = nil, math.huge, nil
                     for _, obj in pairs(Workspace:GetDescendants()) do
@@ -513,7 +507,8 @@ task.spawn(function()
                             local pos = p:IsA("BasePart") and p.Position or (p:IsA("Model") and p:GetPivot().Position or nil)
                             if pos then
                                 local dist = (root.Position - pos).Magnitude
-                                if dist < closestDist then
+                                -- กรองเฉพาะ ProximityPrompt ในระยะไม่เกิน 25 studs เท่านั้น กันเดินหลุด
+                                if dist <= 25 and dist < closestDist then
                                     closestDist = dist
                                     closestPrompt = obj
                                     targetPos = pos
@@ -523,48 +518,72 @@ task.spawn(function()
                     end
                     
                     if closestPrompt and targetPos then
-                        local maxDist = closestPrompt.MaxActivationDistance or 10
                         local standPos = getStandPosition(targetPos, root.Position)
                         
-                        if closestDist > (maxDist - 1.5) then
+                        -- ถ้าระยะห่างเกิน 4.0 Studs ให้เดินเข้าหาจุดยืนด้านข้าง
+                        if closestDist > 4.0 then
                             smartMoveTo(Vector3.new(standPos.X, root.Position.Y, standPos.Z))
                         else
+                            -- พอเข้าระยะ 4.0 Studs สั่งหยุดเดินนิ่งทันที แล้วกด E
                             hum:MoveTo(root.Position)
-                            -- เว้นระยะกด 0.6 วินาที ตามที่กำหนดไว้ในโค้ด
                             if (currentTime - lastClickTime) >= 0.6 then
                                 lastClickTime = currentTime
-                                triggerPromptNaturally(closestPrompt)
+                                forceTriggerPrompt(closestPrompt)
                             end
                         end
                     end
 
-                -- 2. ฟาร์มกล่องอัจฉริยะ (เว้นจังหวะเนียนเท่ากัน)
+                -- 2. ฟาร์มกล่องอัจฉริยะ (ล็อกระยะจุดรับ/จุดส่ง ชัดเจน)
                 elseif boxFarmActive then
                     if hasBox() then
                         equipBox()
-                        if (root.Position - DROPOFF_POS).Magnitude > 4.0 then
+                        local distToDrop = (root.Position - DROPOFF_POS).Magnitude
+                        if distToDrop > 4.0 then
                             smartMoveTo(DROPOFF_POS)
                         else
                             hum:MoveTo(root.Position)
                             if (currentTime - lastClickTime) >= 0.6 then
                                 lastClickTime = currentTime
-                                safePrompt()
+                                -- วนหา Prompt ตรงจุดส่งแล้วกด
+                                for _, v in pairs(Workspace:GetDescendants()) do
+                                    if v:IsA("ProximityPrompt") and v.Enabled then
+                                        local p = v.Parent
+                                        local pos = p:IsA("BasePart") and p.Position or (p:IsA("Model") and p:GetPivot().Position or nil)
+                                        if pos and (pos - DROPOFF_POS).Magnitude <= 8 then
+                                            forceTriggerPrompt(v)
+                                            break
+                                        end
+                                    end
+                                end
+                                task.wait(0.3)
                             end
                         end
                     else
-                        if (root.Position - PICKUP_POS).Magnitude > 4.0 then
+                        local distToPick = (root.Position - PICKUP_POS).Magnitude
+                        if distToPick > 4.0 then
                             smartMoveTo(PICKUP_POS)
                         else
                             hum:MoveTo(root.Position)
                             if (currentTime - lastClickTime) >= 0.6 then
                                 lastClickTime = currentTime
-                                safePrompt()
+                                -- วนหา Prompt ตรงจุดรับกล่องแล้วกดหยิบ
+                                for _, v in pairs(Workspace:GetDescendants()) do
+                                    if v:IsA("ProximityPrompt") and v.Enabled then
+                                        local p = v.Parent
+                                        local pos = p:IsA("BasePart") and p.Position or (p:IsA("Model") and p:GetPivot().Position or nil)
+                                        if pos and (pos - PICKUP_POS).Magnitude <= 8 then
+                                            forceTriggerPrompt(v)
+                                            break
+                                        end
+                                    end
+                                end
+                                task.wait(0.4)
                             end
                         end
                     end
                 end
             end
         end)
-        task.wait(0.15) -- รอบลูป 0.15 วินาที ตามโค้ดต้นฉบับเป๊ะครับ
+        task.wait(0.15)
     end
 end)
