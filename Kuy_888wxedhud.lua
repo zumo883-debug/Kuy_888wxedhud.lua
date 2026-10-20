@@ -462,37 +462,34 @@ local function smartMoveTo(targetPos)
 end
 
 -- =================================================================
--- ลูปเดินฟาร์มหลัก (แก้เดินไถลปีนป่าย & ปรับปรุงระบบกด E ให้ติดชัวร์)
+-- ลูปเดินฟาร์มหลัก (เว้นระยะเวลา 0.6s และ ลูป 0.15s ตามโค้ดต้นฉบับเป๊ะ)
 -- =================================================================
 
-local function safePrompt()
-    local interacted = false
+local function getStandPosition(targetPos, playerPos)
+    local direction = (playerPos - targetPos).Unit
+    return targetPos + (direction * 3.5)
+end
+
+local function triggerPromptNaturally(prompt)
+    if not prompt or not prompt.Enabled then return false end
+    local holdTime = prompt.HoldDuration or 0
+    
     pcall(function()
-        for _, v in pairs(Workspace:GetDescendants()) do
-            if v:IsA("ProximityPrompt") and v.Enabled and not blacklistedPrompts[v] then
-                local p = v.Parent
-                local pos = p:IsA("BasePart") and p.Position or (p:IsA("Model") and p:GetPivot().Position or nil)
-                if pos and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    local dist = (LocalPlayer.Character.HumanoidRootPart.Position - pos).Magnitude
-                    if dist <= (v.MaxActivationDistance or 14) then
-                        local h = v.HoldDuration or 0
-                        if v.InputHoldBegin then v:InputHoldBegin() end
-                        task.wait(h + 0.2)
-                        if v.InputHoldEnd then v:InputHoldEnd() end
-                        
-                        if fireproximityprompt then 
-                            fireproximityprompt(v) 
-                        end
-                        
-                        blacklistedPrompts[v] = tick() + 3.0 
-                        interacted = true
-                        break
-                    end
-                end
-            end
+        prompt:InputHoldBegin()
+        if holdTime > 0 then
+            task.wait(holdTime + 0.1)
+        else
+            task.wait(0.1)
         end
+        prompt:InputHoldEnd()
     end)
-    return interacted
+    
+    if fireproximityprompt and holdTime == 0 then
+        pcall(function()
+            fireproximityprompt(prompt)
+        end)
+    end
+    return true
 end
 
 task.spawn(function()
@@ -507,7 +504,7 @@ task.spawn(function()
             if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
                 local hum, root = char.Humanoid, char.HumanoidRootPart
                 
-                -- 1. ฟาร์มปกติ
+                -- 1. ฟาร์มปกติ (ตามโค้ดต้นฉบับ)
                 if normalFarmActive then
                     local closestPrompt, closestDist, targetPos = nil, math.huge, nil
                     for _, obj in pairs(Workspace:GetDescendants()) do
@@ -526,18 +523,22 @@ task.spawn(function()
                     end
                     
                     if closestPrompt and targetPos then
-                        if closestDist > 4.0 then 
-                            smartMoveTo(targetPos)
+                        local maxDist = closestPrompt.MaxActivationDistance or 10
+                        local standPos = getStandPosition(targetPos, root.Position)
+                        
+                        if closestDist > (maxDist - 1.5) then
+                            smartMoveTo(Vector3.new(standPos.X, root.Position.Y, standPos.Z))
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 1.5 then
-                                lastInteractTime = currentTime
-                                safePrompt()
+                            -- เว้นระยะกด 0.6 วินาที ตามที่กำหนดไว้ในโค้ด
+                            if (currentTime - lastClickTime) >= 0.6 then
+                                lastClickTime = currentTime
+                                triggerPromptNaturally(closestPrompt)
                             end
                         end
                     end
 
-                -- 2. ฟาร์มกล่องอัจฉริยะ
+                -- 2. ฟาร์มกล่องอัจฉริยะ (เว้นจังหวะเนียนเท่ากัน)
                 elseif boxFarmActive then
                     if hasBox() then
                         equipBox()
@@ -545,10 +546,9 @@ task.spawn(function()
                             smartMoveTo(DROPOFF_POS)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 1.5 then
-                                lastInteractTime = currentTime
+                            if (currentTime - lastClickTime) >= 0.6 then
+                                lastClickTime = currentTime
                                 safePrompt()
-                                task.wait(0.3)
                             end
                         end
                     else
@@ -556,17 +556,15 @@ task.spawn(function()
                             smartMoveTo(PICKUP_POS)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 1.5 then
-                                lastInteractTime = currentTime
+                            if (currentTime - lastClickTime) >= 0.6 then
+                                lastClickTime = currentTime
                                 safePrompt()
-                                task.wait(0.5)
                             end
                         end
                     end
                 end
             end
         end)
-        task.wait(0.25) -- ปรับเป็น 0.25 วินาที ตามที่สั่งเรียบร้อยครับ!
+        task.wait(0.15) -- รอบลูป 0.15 วินาที ตามโค้ดต้นฉบับเป๊ะครับ
     end
 end)
-Fluent:Notify({ Title = "WXED HUD", Content = "โหลดสคริปต์ฉบับสมบูรณ์สำเร็จ!", Duration = 4 })
