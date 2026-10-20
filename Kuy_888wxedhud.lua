@@ -1,20 +1,38 @@
 -- =================================================================
--- WXED HUD - Red Knife Duel (Ultimate Full Package)
+-- WXED HUD - Red Knife Duel (Fluent UI + Working Big Head)
 -- =================================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
 local Workspace = game:GetService("Workspace")
-local CoreGui = game:GetService("CoreGui")
-local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
 local PathfindingService = game:GetService("PathfindingService")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- สถานะการทำงานของฟังก์ชันต่างๆ
+-- โหลด Fluent UI Library
+local success, Fluent = pcall(function()
+    return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+end)
+
+if not success or not Fluent then
+    local StarterGui = game:GetService("StarterGui")
+    StarterGui:SetCore("SendNotification", {
+        Title = "WXED HUD Error",
+        Text = "ไม่สามารถโหลด Fluent UI ได้!",
+        Duration = 5
+    })
+    return
+end
+
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+-- สถานะการทำงาน
 local currentSize = 5.0
+local maxHeadSize = 30.0
 local isHeadActive = true
 local isEspActive = true
 local isNpcEspActive = true
@@ -22,7 +40,6 @@ local normalFarmActive = false
 local boxFarmActive = false
 local rapidFireActive = false
 local fastReloadActive = false
-local isMinimized = false
 
 -- พิกัดจุดฟาร์มกล่อง / ส่งของ
 local PICKUP_POS = Vector3.new(-294.2, 25.0, 36.6)
@@ -32,14 +49,27 @@ local DROPOFF_POS = Vector3.new(456.1, 25.8, 176.4)
 local lastInteractTime = 0
 local blacklistedPrompts = {}
 
--- ทำความสะอาด UI เก่าก่อนสร้างใหม่
-if CoreGui:FindFirstChild("WxedUltimateHub") then CoreGui.WxedUltimateHub:Destroy() end
-if CoreGui:FindFirstChild("WxedFpsDisplay") then CoreGui.WxedFpsDisplay:Destroy() end
-if PlayerGui:FindFirstChild("WxedMobileToggle") then PlayerGui.WxedMobileToggle:Destroy() end
+-- ระบบกันหลุด Anti-AFK
+LocalPlayer.Idled:Connect(function()
+    pcall(function()
+        VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+    end)
+end)
 
--- =================================================================
--- ปุ่มลอยวงกลมเปิด/ปิดเมนูบนมือถือ (โลโก้ WXED HUD)
--- =================================================================
+-- สร้างหน้าต่าง Fluent UI
+local Window = Fluent:CreateWindow({
+    Title = "💜 WXED HUD | ดวลมีดแดง",
+    SubTitle = "by WXED",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = false,
+    Theme = "Amethyst",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+-- ปุ่มลอยวงกลมเปิด/ปิดเมนูบนมือถือ
 local MobileGui = Instance.new("ScreenGui", PlayerGui)
 MobileGui.Name = "WxedMobileToggle"
 MobileGui.ResetOnSpawn = false
@@ -58,12 +88,106 @@ local BtnStroke = Instance.new("UIStroke", ToggleBtn)
 BtnStroke.Color = Color3.fromRGB(215, 65, 255)
 BtnStroke.Thickness = 2
 
--- =================================================================
--- ระบบแสดง FPS & Ping บนจอแบบนิ่งๆ สมูทๆ
--- =================================================================
-local FpsGui = Instance.new("ScreenGui")
+ToggleBtn.MouseButton1Click:Connect(function()
+    pcall(function()
+        Window:Minimize()
+    end)
+end)
+
+-- สร้างแท็บเมนู
+local FarmTab = Window:AddTab({ Title = "🌾 ฟาร์ม", Icon = "package" })
+local CombatTab = Window:AddTab({ Title = "⚔️ ต่อสู้/ESP", Icon = "sword" })
+local SettingsTab = Window:AddTab({ Title = "⚙️ ตั้งค่า", Icon = "settings" })
+
+local Options = Fluent.Options
+
+-- ==================== แท็บฟาร์ม ====================
+FarmTab:AddParagraph({
+    Title = "🌾 ระบบฟาร์ม & ร้านค้า",
+    Content = "ฟาร์มกล่องอัจฉริยะ & ออโต้ฟาร์มรอบตัว"
+})
+
+FarmTab:AddToggle("NormalFarmToggle", {
+    Title = "📦 ฟาร์มปกติ (กดอัตโนมัติรอบตัว)",
+    Default = false
+}):OnChanged(function(Value)
+    normalFarmActive = Value
+    if Value then boxFarmActive = false if Options.BoxFarmToggle then Options.BoxFarmToggle:SetValue(false) end end
+end)
+
+FarmTab:AddToggle("BoxFarmToggle", {
+    Title = "📦 ฟาร์มกล่องอัจฉริยะ (หยิบ ➔ อ้อม ➔ ส่ง)",
+    Default = false
+}):OnChanged(function(Value)
+    boxFarmActive = Value
+    if Value then normalFarmActive = false if Options.NormalFarmToggle then Options.NormalFarmToggle:SetValue(false) end end
+end)
+
+-- ==================== แท็บต่อสู้/ESP ====================
+CombatTab:AddToggle("HeadToggle", {
+    Title = "🎯 ระบบหัวใหญ่ (Head Expander)",
+    Default = true
+}):OnChanged(function(Value)
+    isHeadActive = Value
+end)
+
+CombatTab:AddSlider("HeadSizeSlider", {
+    Title = "ขนาดหัว",
+    Description = "ปรับขนาดหัวตัวละคร",
+    Default = 5.0,
+    Min = 0.5,
+    Max = 30.0,
+    Rounding = 1,
+}):OnChanged(function(Value)
+    currentSize = Value
+end)
+
+CombatTab:AddToggle("RapidFireToggle", {
+    Title = "🔥 ยิงรัวกระสุน",
+    Default = false
+}):OnChanged(function(Value)
+    rapidFireActive = Value
+end)
+
+CombatTab:AddToggle("FastReloadToggle", {
+    Title = "⚡ รีโหลดไว",
+    Default = false
+}):OnChanged(function(Value)
+    fastReloadActive = Value
+end)
+
+CombatTab:AddToggle("EspToggle", {
+    Title = "👁️ มองทะลุผู้เล่น (ESP สีม่วง)",
+    Default = true
+}):OnChanged(function(Value)
+    isEspActive = Value
+end)
+
+CombatTab:AddToggle("NpcEspToggle", {
+    Title = "📍 มองทะลุ NPC ที่กดตอบโต้ได้",
+    Default = true
+}):OnChanged(function(Value)
+    isNpcEspActive = Value
+    if not Value then
+        pcall(function()
+            for _, obj in pairs(Workspace:GetDescendants()) do
+                if obj:IsA("Highlight") and obj.Name == "NpcInteractiveHighlight" then
+                    obj:Destroy()
+                end
+            end
+        end)
+    end
+end)
+
+-- ==================== แท็บตั้งค่า ====================
+SettingsTab:AddParagraph({
+    Title = "⚙️ ตั้งค่าความลื่น & UI",
+    Content = "แสดงค่า FPS/Ping บนหน้าจอ"
+})
+
+-- UI แสดง FPS & Ping สุดสวย
+local FpsGui = Instance.new("ScreenGui", PlayerGui)
 FpsGui.Name = "WxedFpsDisplay"
-FpsGui.Parent = CoreGui
 FpsGui.ResetOnSpawn = false
 
 local FpsLabel = Instance.new("TextLabel", FpsGui)
@@ -76,189 +200,54 @@ FpsLabel.TextSize = 13
 FpsLabel.Font = Enum.Font.GothamBold
 FpsLabel.Text = " FPS: 60 | Ping: 0ms"
 
-local LabelCorner = Instance.new("UICorner", FpsLabel)
-LabelCorner.CornerRadius = UDim.new(0, 6)
-
+Instance.new("UICorner", FpsLabel).CornerRadius = UDim.new(0, 6)
 local LabelStroke = Instance.new("UIStroke", FpsLabel)
 LabelStroke.Color = Color3.fromRGB(215, 65, 255)
 LabelStroke.Thickness = 1
 
--- =================================================================
--- หน้าต่างเมนูหลัก (Main Frame)
--- =================================================================
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "WxedUltimateHub"
-ScreenGui.Parent = CoreGui
-ScreenGui.ResetOnSpawn = false
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 340, 0, 420)
-MainFrame.Position = UDim2.new(0.5, -170, 0.3, -210)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.ClipsDescendants = true
-MainFrame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 12)
-UICorner.Parent = MainFrame
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(130, 80, 255)
-UIStroke.Thickness = 1.5
-UIStroke.Parent = MainFrame
-
--- หัวข้อเมนู
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -40, 0, 40)
-Title.Position = UDim2.new(0, 12, 0, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "💜 WXED HUD | ดวลมีดแดง (ตัวเต็ม)"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 15
-Title.Font = Enum.Font.GothamBold
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = MainFrame
-
--- ปุ่มพับหน้าต่าง (-)
-local MinimizeBtn = Instance.new("TextButton")
-MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
-MinimizeBtn.Position = UDim2.new(1, -35, 0, 5)
-MinimizeBtn.BackgroundTransparency = 1
-MinimizeBtn.Text = "—"
-MinimizeBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
-MinimizeBtn.TextSize = 18
-MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.Parent = MainFrame
-
--- กดปุ่มลอยวงกลมเพื่อเปิด/ปิดเมนูหลัก
-ToggleBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
+SettingsTab:AddToggle("ShowFpsToggle", {
+    Title = "📊 แสดง FPS & Ping บนหน้าจอ",
+    Default = true
+}):OnChanged(function(Value)
+    FpsGui.Enabled = Value
 end)
 
--- Container ใส่ปุ่มฟังก์ชันต่างๆ
-local ScrollingContainer = Instance.new("ScrollingFrame")
-ScrollingContainer.Name = "ScrollingContainer"
-ScrollingContainer.Size = UDim2.new(1, 0, 1, -45)
-ScrollingContainer.Position = UDim2.new(0, 0, 0, 45)
-ScrollingContainer.BackgroundTransparency = 1
-ScrollingContainer.CanvasSize = UDim2.new(0, 0, 0, 580)
-ScrollingContainer.ScrollBarThickness = 4
-ScrollingContainer.Parent = MainFrame
-
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-UIListLayout.SortOrder = Enum.SortOrder.LayoutIndex
-UIListLayout.Padding = UDim.new(0, 8)
-UIListLayout.Parent = ScrollingContainer
-
--- ฟังก์ชันสร้างปุ่มเปิด/ปิด (Toggle Button)
-local function CreateToggleButton(name, defaultText, defaultState, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9, 0, 0, 36)
-    btn.BackgroundColor3 = defaultState and Color3.fromRGB(130, 80, 255) or Color3.fromRGB(50, 50, 60)
-    btn.Text = defaultText .. (defaultState and ": เปิด" or ": ปิด")
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 13
-    btn.Font = Enum.Font.GothamBold
-    btn.Parent = ScrollingContainer
-    
-    local corner = Instance.new("UICorner", btn)
-    corner.CornerRadius = UDim.new(0, 8)
-    
-    local state = defaultState
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        btn.BackgroundColor3 = state and Color3.fromRGB(130, 80, 255) or Color3.fromRGB(50, 50, 60)
-        btn.Text = defaultText .. (state and ": เปิด" or ": ปิด")
-        callback(state)
-    end)
-    return btn
-end
-
--- =================================================================
--- สร้างปุ่มฟังก์ชันต่างๆ ในเมนู
--- =================================================================
-
-CreateToggleButton("NormalFarm", "🌾 ออโต้ฟาร์มทั่วไป", false, function(v)
-    normalFarmActive = v
-    if v then boxFarmActive = false end
-end)
-
-CreateToggleButton("BoxFarm", "📦 ฟาร์มกล่องอัจฉริยะ (หยิบ➔ส่ง)", false, function(v)
-    boxFarmActive = v
-    if v then normalFarmActive = false end
-end)
-
-CreateToggleButton("HeadToggle", "🎯 ระบบหัวใหญ่ (Head Expander)", true, function(v)
-    isHeadActive = v
-end)
-
-CreateToggleButton("RapidFire", "🔥 ยิงรัวกระสุน", false, function(v)
-    rapidFireActive = v
-end)
-
-CreateToggleButton("FastReload", "⚡ รีโหลดไว", false, function(v)
-    fastReloadActive = v
-end)
-
-CreateToggleButton("EspToggle", "👁️ มองทะลุผู้เล่น (สีม่วง)", true, function(v)
-    isEspActive = v
-end)
-
-CreateToggleButton("NpcEspToggle", "📍 มองทะลุ NPC ที่กดตอบโต้ได้", true, function(v)
-    isNpcEspActive = v
-    if not v then
+SettingsTab:AddButton({
+    Title = "🎨 โหมดภาพดินน้ำมัน (ลดแลค)",
+    Callback = function()
         pcall(function()
-            for _, obj in pairs(Workspace:GetDescendants()) do
-                if obj:IsA("Highlight") and obj.Name == "NpcInteractiveHighlight" then
-                    obj:Destroy()
+            Lighting.GlobalShadows = false
+            Lighting.FogEnd = 9e9
+            Lighting.Brightness = 1
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v:IsA("BasePart") and not v:IsA("MeshPart") then
+                    v.Material = Enum.Material.SmoothPlastic
+                    v.Reflectance = 0
+                elseif v:IsA("Decal") or v:IsA("Texture") then
+                    v:Destroy()
                 end
             end
         end)
+        Fluent:Notify({ Title = "สำเร็จ!", Content = "เปิดโหมดภาพดินน้ำมันเรียบร้อย", Duration = 2 })
     end
-end)
+})
 
-CreateToggleButton("FpsToggle", "📊 แสดง FPS & Ping บนจอ", true, function(v)
-    FpsGui.Enabled = v
-end)
+InterfaceManager:SetLibrary(Fluent)
+SaveManager:SetLibrary(Fluent)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetFolder("WxedHub_RedKnife")
+InterfaceManager:BuildInterfaceSection(SettingsTab)
+SaveManager:BuildConfigSection(SettingsTab)
 
--- Minimize Logic (ปุ่มพับจอ)
-MinimizeBtn.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    if isMinimized then
-        ScrollingContainer.Visible = false
-        MainFrame:TweenSize(UDim2.new(0, 340, 0, 40), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.2, true)
-        MinimizeBtn.Text = "+"
-    else
-        MainFrame:TweenSize(UDim2.new(0, 340, 0, 420), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.2, true, function()
-            ScrollingContainer.Visible = true
-        end)
-        MinimizeBtn.Text = "—"
-    end
-end)
+Window:SelectTab(1)
 
 -- =================================================================
--- Anti-AFK (กันหลุด)
--- =================================================================
-LocalPlayer.Idled:Connect(function()
-    pcall(function()
-        VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-        task.wait(1)
-        VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-    end)
-end)
-
--- =================================================================
--- CORE LOOPS (ระบบทำงานหลังบ้านทั้งหมด)
+-- CORE LOOPS (ระบบทำงานหลังบ้าน)
 -- =================================================================
 
+-- 1. ลูปจัดการ FPS, ระบบหัวใหญ่ (ตามโค้ดต้นฉบับพี่ชาย) และ ESP
 local lastUpdate = 0
 RunService.RenderStepped:Connect(function(dt)
-    -- อัปเดต FPS & Ping แบบนิ่งๆ สมูทๆ
     if tick() - lastUpdate >= 0.5 then
         lastUpdate = tick()
         local currentFps = math.clamp(math.floor(1 / dt + 0.5), 1, 300)
@@ -267,27 +256,32 @@ RunService.RenderStepped:Connect(function(dt)
         FpsLabel.Text = string.format(" FPS: %d | Ping: %dms", currentFps, ping)
     end
 
-    -- ระบบหัวใหญ่ & ESP ผู้เล่นสีม่วง
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local char = player.Character
             local head = char:FindFirstChild("Head")
             
+            -- หัวใหญ่ (ใช้โค้ดต้นฉบับที่พี่ชายให้มาเป๊ะๆ)
             if isHeadActive and head then
                 head.CanCollide = false
                 head.Massless = true
+                
                 for _, child in pairs(head:GetChildren()) do
-                    if child:IsA("SpecialMesh") or child:IsA("CharacterMesh") then child:Destroy() end
+                    if child:IsA("SpecialMesh") or child:IsA("CharacterMesh") then
+                        child:Destroy()
+                    end
                 end
+                
                 head.Size = Vector3.new(currentSize, currentSize, currentSize)
             end
             
+            -- ESP ผู้เล่นสีม่วง
             local highlight = char:FindFirstChild("ESPHighlight")
             if not highlight then
                 highlight = Instance.new("Highlight", char)
                 highlight.Name = "ESPHighlight"
                 highlight.Adornee = char
-                highlight.FillColor = Color3.fromRGB(180, 60, 255) -- สีม่วงเท่ๆ
+                highlight.FillColor = Color3.fromRGB(180, 60, 255)
                 highlight.FillTransparency = 0.5
                 highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
                 highlight.OutlineTransparency = 0
@@ -296,7 +290,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- ระบบมองทะลุเฉพาะ NPC ที่มี ProximityPrompt (กดตอบโต้ได้) เท่านั้น
+    -- ESP NPC เฉพาะตัวที่มี ProximityPrompt
     if isNpcEspActive then
         pcall(function()
             for _, obj in pairs(Workspace:GetDescendants()) do
@@ -305,14 +299,13 @@ RunService.RenderStepped:Connect(function(dt)
                     while targetModel and not targetModel:IsA("Model") and targetModel ~= Workspace do
                         targetModel = targetModel.Parent
                     end
-                    
                     if targetModel and targetModel:IsA("Model") and targetModel ~= LocalPlayer.Character then
                         local npcHi = targetModel:FindFirstChild("NpcInteractiveHighlight")
                         if not npcHi then
                             npcHi = Instance.new("Highlight", targetModel)
                             npcHi.Name = "NpcInteractiveHighlight"
                             npcHi.Adornee = targetModel
-                            npcHi.FillColor = Color3.fromRGB(0, 255, 200) -- สีฟ้าอมเขียวแยกจากผู้เล่น
+                            npcHi.FillColor = Color3.fromRGB(0, 255, 200)
                             npcHi.FillTransparency = 0.4
                             npcHi.OutlineColor = Color3.fromRGB(255, 255, 255)
                             npcHi.OutlineTransparency = 0
@@ -325,7 +318,7 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
--- ระบบยิงรัว & รีโหลดไว
+-- 2. ยิงรัว & รีโหลดไว
 RunService.Stepped:Connect(function()
     pcall(function()
         local char = LocalPlayer.Character
@@ -351,7 +344,7 @@ RunService.Stepped:Connect(function()
     end)
 end)
 
--- ฟังก์ชันฟาร์มกล่อง & ฟาร์มทั่วไป
+-- 3. ระบบฟาร์ม
 local function safePrompt()
     pcall(function()
         for _, v in pairs(Workspace:GetDescendants()) do
@@ -407,7 +400,6 @@ local function smartMoveTo(targetPos)
     end
 end
 
--- ลูปเดินฟาร์มหลัก
 task.spawn(function()
     while true do
         pcall(function()
@@ -483,3 +475,5 @@ task.spawn(function()
         task.wait(0.25)
     end
 end)
+
+Fluent:Notify({ Title = "WXED HUD", Content = "โหลดสคริปต์ Fluent UI + ระบบหัวใหญ่สำเร็จ!", Duration = 5 })
