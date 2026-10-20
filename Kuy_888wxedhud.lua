@@ -307,7 +307,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- มองทะลุเฉพาะ NPC ที่มี ProximityPrompt
+        -- มองทะลุเฉพาะ NPC ที่มี ProximityPrompt
     if isNpcEspActive then
         pcall(function()
             for _, prompt in pairs(Workspace:GetDescendants()) do
@@ -323,7 +323,7 @@ RunService.RenderStepped:Connect(function(dt)
                     end
                     if targetModel and targetModel ~= LocalPlayer.Character and not Players:GetPlayerFromCharacter(targetModel) then
                         local npcHi = targetModel:FindFirstChild("NpcInteractiveHighlight")
-                        if not npcHi me
+                        if not npcHi then
                             npcHi = Instance.new("Highlight", targetModel)
                             npcHi.Name = "NpcInteractiveHighlight"
                             npcHi.Adornee = targetModel
@@ -337,8 +337,8 @@ RunService.RenderStepped:Connect(function(dt)
                 end
             end
         end)
-    end
-end)
+        end
+        
 
 -- 3. ระบบยิงรัว, รีโหลดไว, กระสุนไม่จำกัด & ฆ่าทั้งหมด (Kill All)
 RunService.Stepped:Connect(function()
