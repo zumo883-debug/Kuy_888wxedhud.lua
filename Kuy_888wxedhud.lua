@@ -332,7 +332,7 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
--- 3. ยิงรัว, รีโหลดไว & กระสุนไม่จำกัด
+-- 3. ยิงรัว, รีโหลดไว & กระสุนไม่จำกัด (อัปเกรดใหม่ ดึงค่าจากตัวปืนและรีโมทเกม)
 RunService.Stepped:Connect(function()
     pcall(function()
         local char = LocalPlayer.Character
@@ -344,6 +344,7 @@ RunService.Stepped:Connect(function()
         if bp then for _, v in pairs(bp:GetChildren()) do if v:IsA("Tool") then table.insert(tools, v) end end end
 
         for _, tool in pairs(tools) do
+            -- 1. เจาะแก้ค่า Value ข้างในปืน
             for _, v in pairs(tool:GetDescendants()) do
                 if v:IsA("NumberValue") or v:IsA("IntValue") then
                     local name = string.lower(v.Name)
@@ -353,25 +354,32 @@ RunService.Stepped:Connect(function()
                     if fastReloadActive and (name:find("reload") or name:find("reloadtime")) then
                         v.Value = 0.01
                     end
-                    if infAmmoActive and (name:find("ammo") or name:find("clip") or name:find("maxammo") or name:find("storedammo")) then
-                        if v.Value < 999 then v.Value = 999 end
+                    if infAmmoActive and (name:find("ammo") or name:find("clip") or name:find("bullet") or name:find("magazine") or name:find("stored")) then
+                        v.Value = 9999
                     end
                 end
             end
             
+            -- 2. เจาะแก้ค่า Attributes บนตัว Tool (บังคับค้างไว้)
             if rapidFireActive then
                 tool:SetAttribute("FireRate", 0.001)
                 tool:SetAttribute("CoolDown", 0.001)
+                tool:SetAttribute("Delay", 0.001)
             end
-            if fastReloadActive then tool:SetAttribute("ReloadTime", 0.01) end
+            if fastReloadActive then 
+                tool:SetAttribute("ReloadTime", 0.01) 
+            end
             if infAmmoActive then
-                tool:SetAttribute("Ammo", 999)
-                tool:SetAttribute("MaxAmmo", 999)
-                tool:SetAttribute("StoredAmmo", 999)
+                tool:SetAttribute("Ammo", 9999)
+                tool:SetAttribute("MaxAmmo", 9999)
+                tool:SetAttribute("StoredAmmo", 9999)
+                tool:SetAttribute("Clip", 9999)
+                tool:SetAttribute("Bullets", 9999)
             end
         end
     end)
 end)
+
 
 -- 4. ระบบฟาร์มกล่องอัจฉริยะ
 local function safePrompt()
