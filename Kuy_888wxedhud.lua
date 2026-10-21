@@ -487,7 +487,7 @@ task.spawn(function()
             if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
                 local hum, root = char.Humanoid, char.HumanoidRootPart
                 
-                -- 1. ฟาร์มปกติ (จำกัดระยะ 25 studs, ยืน 3.5 studs กันปีน)
+                -- 1. ฟาร์มปกติ (เดินไปยืนใกล้ๆ แล้วจำลองการกด E ค้างแบบสมจริง)
                 if normalFarmActive then
                     local closestPrompt, closestDist, targetPos = nil, math.huge, nil
                     for _, obj in pairs(Workspace:GetDescendants()) do
@@ -511,14 +511,20 @@ task.spawn(function()
                             hum:MoveTo(Vector3.new(standPos.X, root.Position.Y, standPos.Z))
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 1.5 then -- ช้าลง ปลอดภัยขึ้น (1.5 วินาที)
+                            if (currentTime - lastInteractTime) >= 2.0 then -- เว้นระยะห่างระหว่างการกดแต่ละอันให้ปลอดภัย
                                 lastInteractTime = currentTime
-                                forceTriggerPrompt(closestPrompt)
+                                pcall(function()
+                                    if closestPrompt.InputHoldBegin then closestPrompt:InputHoldBegin() end
+                                    task.wait(closestPrompt.HoldDuration or 1.0) -- รอให้หลอดวิ่งจนเต็มเหมือนกดมือ
+                                    if closestPrompt.InputHoldEnd then closestPrompt:InputHoldEnd() end
+                                    if fireproximityprompt then fireproximityprompt(closestPrompt) end
+                                    blacklistedPrompts[closestPrompt] = tick() + 4
+                                end)
                             end
                         end
                     end
 
-                -- 2. ฟาร์มกล่องอัจฉริยะ (หยิบ ➔ ส่ง)
+                -- 2. ฟาร์มกล่องอัจฉริยะ (หยิบ ➔ เดินไปส่ง แล้วกด E ค้าง)
                 elseif boxFarmActive then
                     if hasBox() then
                         equipBox()
@@ -527,10 +533,10 @@ task.spawn(function()
                             hum:MoveTo(DROPOFF_POS)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 1.5 then -- ช้าลง ปลอดภัยขึ้น (1.5 วินาที)
+                            if (currentTime - lastInteractTime) >= 2.0 then
                                 lastInteractTime = currentTime
                                 safePrompt()
-                                task.wait(0.8)
+                                task.wait(1.0)
                             end
                         end
                     else
@@ -539,10 +545,10 @@ task.spawn(function()
                             hum:MoveTo(PICKUP_POS)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 1.5 then -- ช้าลง ปลอดภัยขึ้น (1.5 วินาที)
+                            if (currentTime - lastInteractTime) >= 2.0 then
                                 lastInteractTime = currentTime
                                 safePrompt()
-                                task.wait(0.8)
+                                task.wait(1.0)
                             end
                         end
                     end
