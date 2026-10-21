@@ -487,7 +487,7 @@ task.spawn(function()
             if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
                 local hum, root = char.Humanoid, char.HumanoidRootPart
                 
-                -- 1. ฟาร์มปกติ (เดินไปยืนใกล้ๆ แล้วจำลองการกด E ค้างแบบสมจริง)
+                -- 1. ฟาร์มปกติ (เดินไปยืน แล้วสุ่มจังหวะกด E ค้างแบบเนียนๆ)
                 if normalFarmActive then
                     local closestPrompt, closestDist, targetPos = nil, math.huge, nil
                     for _, obj in pairs(Workspace:GetDescendants()) do
@@ -511,21 +511,22 @@ task.spawn(function()
                             hum:MoveTo(Vector3.new(standPos.X, root.Position.Y, standPos.Z))
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 2.0 then -- เว้นระยะห่างระหว่างการกดแต่ละอันให้ปลอดภัย
+                            -- สุ่มเวลาหน่วงระหว่าง 1.2 ถึง 1.8 วินาที กันตรวจจับ Bot Pattern
+                            local randomDelay = 1.2 + (math.random(0, 600) / 1000)
+                            if (currentTime - lastInteractTime) >= randomDelay then
                                 lastInteractTime = currentTime
                                 pcall(function()
-                                    if closestPrompt.InputHoldBegin then closestPrompt:InputHoldBegin() end
-                                    task.wait(closestPrompt.HoldDuration or 1.0) -- รอให้หลอดวิ่งจนเต็มเหมือนกดมือ
-                                    if closestPrompt.InputHoldEnd then closestPrompt:InputHoldEnd() end
-                                    if fireproximityprompt then fireproximityprompt(closestPrompt) end
-                                    blacklistedPrompts[closestPrompt] = tick() + 4
+                                    task.wait(math.random(10, 25) / 100) -- Humanizing delay ก่อนกด (0.1 - 0.25s)
+                                    forceTriggerPrompt(closestPrompt)
+                                    blacklistedPrompts[closestPrompt] = tick() + 3
                                 end)
                             end
                         end
                     end
 
-                -- 2. ฟาร์มกล่องอัจฉริยะ (หยิบ ➔ เดินไปส่ง แล้วกด E ค้าง)
+                -- 2. ฟาร์มกล่องอัจฉริยะ (หยิบ ➔ เดินไปส่ง + ระบบสุ่มหน่วงเวลา)
                 elseif boxFarmActive then
+                    local randomDelay = 1.2 + (math.random(0, 600) / 1000)
                     if hasBox() then
                         equipBox()
                         local distToDrop = (root.Position - DROPOFF_POS).Magnitude
@@ -533,10 +534,11 @@ task.spawn(function()
                             hum:MoveTo(DROPOFF_POS)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 2.0 then
+                            if (currentTime - lastInteractTime) >= randomDelay then
                                 lastInteractTime = currentTime
+                                task.wait(math.random(10, 20) / 100)
                                 safePrompt()
-                                task.wait(1.0)
+                                task.wait(0.5)
                             end
                         end
                     else
@@ -545,16 +547,17 @@ task.spawn(function()
                             hum:MoveTo(PICKUP_POS)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 2.0 then
+                            if (currentTime - lastInteractTime) >= randomDelay then
                                 lastInteractTime = currentTime
+                                task.wait(math.random(10, 20) / 100)
                                 safePrompt()
-                                task.wait(1.0)
+                                task.wait(0.5)
                             end
                         end
                     end
                 end
             end
         end)
-        task.wait(0.3)
+        task.wait(0.2)
     end
 end)
