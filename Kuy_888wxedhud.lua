@@ -307,7 +307,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-        -- มองทะลุเฉพาะ NPC ที่มี ProximityPrompt
+    -- มองทะลุเฉพาะ NPC ที่มี ProximityPrompt
     if isNpcEspActive then
         pcall(function()
             for _, prompt in pairs(Workspace:GetDescendants()) do
@@ -337,8 +337,8 @@ RunService.RenderStepped:Connect(function(dt)
                 end
             end
         end)
-        end
-        
+    end
+end)
 
 -- 3. ระบบยิงรัว, รีโหลดไว, กระสุนไม่จำกัด & ฆ่าทั้งหมด (Kill All)
 RunService.Stepped:Connect(function()
@@ -487,7 +487,7 @@ task.spawn(function()
             if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
                 local hum, root = char.Humanoid, char.HumanoidRootPart
                 
-           -- 1. ฟาร์มปกติ (จำกัดระยะ 25 studs, ยืน 3.5 studs กันปีน)
+                -- 1. ฟาร์มปกติ (จำกัดระยะ 25 studs, ยืน 3.5 studs กันปีน)
                 if normalFarmActive then
                     local closestPrompt, closestDist, targetPos = nil, math.huge, nil
                     for _, obj in pairs(Workspace:GetDescendants()) do
@@ -511,14 +511,15 @@ task.spawn(function()
                             hum:MoveTo(Vector3.new(standPos.X, root.Position.Y, standPos.Z))
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 0.6 then
+                                                    if (currentTime - lastInteractTime) >= 0.6 then
                                 lastInteractTime = currentTime
                                 forceTriggerPrompt(closestPrompt)
                             end
                         end
                     end
+                        end
 
-                -- 2. ฟาร์มกล่องอัจฉริยะ (หยิบ ➔ ส่ง)
+                                -- 2. ฟาร์มกล่องอัจฉริยะ (หยิบ ➔ ส่ง)
                 elseif boxFarmActive then
                     if hasBox() then
                         equipBox()
