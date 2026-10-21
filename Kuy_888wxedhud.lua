@@ -511,15 +511,14 @@ task.spawn(function()
                             hum:MoveTo(Vector3.new(standPos.X, root.Position.Y, standPos.Z))
                         else
                             hum:MoveTo(root.Position)
-                                                    if (currentTime - lastInteractTime) >= 0.6 then
+                            if (currentTime - lastInteractTime) >= 0.6 then
                                 lastInteractTime = currentTime
                                 forceTriggerPrompt(closestPrompt)
                             end
                         end
                     end
-                        end
 
-                                -- 2. ฟาร์มกล่องอัจฉริยะ (หยิบ ➔ ส่ง)
+                -- 2. ฟาร์มกล่องอัจฉริยะ (หยิบ ➔ ส่ง)
                 elseif boxFarmActive then
                     if hasBox() then
                         equipBox()
@@ -553,3 +552,4 @@ task.spawn(function()
         task.wait(0.15)
     end
 end)
+                            
