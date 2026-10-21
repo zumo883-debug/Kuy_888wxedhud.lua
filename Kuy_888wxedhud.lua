@@ -511,7 +511,7 @@ task.spawn(function()
                             hum:MoveTo(Vector3.new(standPos.X, root.Position.Y, standPos.Z))
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 0.6 then
+                            if (currentTime - lastInteractTime) >= 0.8 then -- ปรับหน่วงเวลา 0.8s กันโดนเตะ
                                 lastInteractTime = currentTime
                                 forceTriggerPrompt(closestPrompt)
                             end
@@ -527,10 +527,10 @@ task.spawn(function()
                             hum:MoveTo(DROPOFF_POS)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 0.6 then
+                            if (currentTime - lastInteractTime) >= 0.8 then -- ปรับหน่วงเวลา 0.8s กันโดนเตะ
                                 lastInteractTime = currentTime
                                 safePrompt()
-                                task.wait(0.3)
+                                task.wait(0.5)
                             end
                         end
                     else
@@ -539,17 +539,16 @@ task.spawn(function()
                             hum:MoveTo(PICKUP_POS)
                         else
                             hum:MoveTo(root.Position)
-                            if (currentTime - lastInteractTime) >= 0.6 then
+                            if (currentTime - lastInteractTime) >= 0.8 then -- ปรับหน่วงเวลา 0.8s กันโดนเตะ
                                 lastInteractTime = currentTime
                                 safePrompt()
-                                task.wait(0.4)
+                                task.wait(0.5)
                             end
                         end
                     end
                 end
             end
         end)
-        task.wait(0.15)
+        task.wait(0.2)
     end
 end)
-                            
